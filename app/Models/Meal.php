@@ -11,20 +11,23 @@ class Meal extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
+        protected $fillable = [
         'meal_plan_id',
         'name',
         'description',
         'image',
+        'meal_type',
+        'day_of_week',
         'is_active',
     ];
 
     protected function casts(): array
-    {
-        return [
-            'is_active' => 'boolean',
-        ];
-    }
+        {
+            return [
+                'day_of_week' => 'integer',
+                'is_active' => 'boolean',
+            ];
+        }
 
     public function mealPlan(): BelongsTo
     {

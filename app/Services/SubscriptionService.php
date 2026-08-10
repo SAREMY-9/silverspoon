@@ -6,6 +6,7 @@ use App\Models\MealPlan;
 use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 class SubscriptionService
@@ -39,11 +40,25 @@ class SubscriptionService
             return $user->subscriptions()->create([
                 'meal_plan_id' => $mealPlan->id,
                 'starts_at' => now(),
-                'ends_at' => now()->addDays(
-                    $mealPlan->duration_days
-                ),
+                'ends_at' => now()->addDays($mealPlan->duration_days - 1)
+                                ->endOfDay(),
                 'status' => 'pending',
+                'access_code' => $this->generateAccessCode(),
+                'qr_token' => (string) Str::uuid(),
             ]);
         });
     }
+
+
+        protected function generateAccessCode(): string
+        {
+            do {
+                $code = 'SS-' . strtoupper(Str::random(10));
+            } while (
+                Subscription::where('access_code', $code)->exists()
+            );
+
+            return $code;
+        }
 }
+

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+
 class Subscription extends Model
 {
     use HasFactory;
@@ -18,6 +19,8 @@ class Subscription extends Model
         'starts_at',
         'ends_at',
         'status',
+        'access_code',
+        'qr_token',
     ];
 
     protected function casts(): array

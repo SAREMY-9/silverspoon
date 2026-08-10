@@ -16,6 +16,7 @@ class MealRedemption extends Model
         'meal_id',
         'redeemed_at',
         'reference',
+        'redeemed_by_user_id',
     ];
 
     protected function casts(): array
@@ -41,5 +42,13 @@ class MealRedemption extends Model
     public function meal(): BelongsTo
     {
         return $this->belongsTo(Meal::class);
+    }
+
+    public function redeemedBy(): BelongsTo
+    {
+        return $this->belongsTo(
+            User::class,
+            'redeemed_by_user_id'
+        );
     }
 }

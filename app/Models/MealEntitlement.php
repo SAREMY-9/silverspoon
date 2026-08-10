@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Models\MealRedemption;
+
 
 class MealEntitlement extends Model
 {
@@ -17,6 +19,7 @@ class MealEntitlement extends Model
         'meal_id',
         'status',
         'expires_at',
+        'scheduled_for',
     ];
 
     protected function casts(): array
@@ -24,6 +27,7 @@ class MealEntitlement extends Model
         return [
             'status' => EntitlementStatus::class,
             'expires_at' => 'datetime',
+            'scheduled_for' => 'date',
         ];
     }
 

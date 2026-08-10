@@ -67,7 +67,7 @@ class PaymentService
                 'payment_reference' => $providerReference,
             ]);
 
-            
+
             $subscription = $payment->subscription()->lockForUpdate()->first();
 
             if (!$subscription) {
@@ -112,31 +112,63 @@ class PaymentService
     /**
      * Generate the meal entitlements belonging to a subscription.
      */
-    protected function createEntitlements(Subscription $subscription): void
-    {
-        $subscription->loadMissing('mealPlan', 'entitlements');
+    protected function createEntitlements(
+            Subscription $subscription
+        ): void {
+            $subscription->loadMissing(
+                'mealPlan',
+                'entitlements'
+            );
 
-        // Prevent duplicate entitlement generation.
-        if ($subscription->entitlements->isNotEmpty()) {
-            return;
+            // Idempotency protection.
+            if ($subscription->entitlements()->exists()) {
+                return;
+            }
+
+            $mealPlan = $subscription->mealPlan;
+
+            $start = $subscription->starts_at->copy()->startOfDay();
+            $end = $subscription->ends_at->copy()->startOfDay();
+
+            $meals = $mealPlan->meals()
+                ->where('is_active', true)
+                ->get()
+                ->keyBy(function ($meal) {
+                    return $meal->day_of_week . ':' . $meal->meal_type;
+                });
+
+            for (
+                $date = $start->copy();
+                $date->lte($end);
+                $date->addDay()
+            ) {
+                $dayOfWeek = $date->dayOfWeekIso;
+
+                foreach ([
+                    'breakfast',
+                    'lunch',
+                    'supper',
+                ] as $mealType) {
+
+                    $key = $dayOfWeek . ':' . $mealType;
+
+                    $meal = $meals->get($key);
+
+                    if (!$meal) {
+                        throw new RuntimeException(
+                            "No {$mealType} meal configured for {$date->format('l')}."
+                        );
+                    }
+
+                    $subscription->entitlements()->create([
+                        'meal_id' => $meal->id,
+                        'scheduled_for' => $date->toDateString(),
+                        'status' => 'available',
+                        'expires_at' => $date->copy()->endOfDay(),
+                    ]);
+                }
+            }
         }
-
-        $mealPlan = $subscription->mealPlan;
-
-        $meals = $mealPlan->meals()
-            ->where('is_active', true)
-            ->limit($mealPlan->meal_limit)
-            ->get();
-
-        foreach ($meals as $meal) {
-            $subscription->entitlements()->create([
-                'meal_id' => $meal->id,
-                'status' => 'available',
-                'expires_at' => $subscription->ends_at,
-            ]);
-        }
-    }
-
     /**
      * Generate an internal payment reference.
      */

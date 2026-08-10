@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MealPlan;
 use App\Services\Payments\MpesaService;
+use App\Services\Payments\PaystackService;
 use App\Services\Payments\PaymentService;
 use App\Services\SubscriptionService;
 use Illuminate\Http\JsonResponse;
@@ -18,19 +19,29 @@ class CheckoutController extends Controller
         MealPlan $mealPlan,
         SubscriptionService $subscriptionService,
         PaymentService $paymentService,
-        MpesaService $mpesaService
+        MpesaService $mpesaService,
+        PaystackService $paystackService
     ): JsonResponse {
         $validated = $request->validate([
-            'phone' => [
+            'payment_method' => [
                 'required',
+                'string',
+                'in:mpesa,paystack',
+            ],
+
+            'phone' => [
+                'nullable',
                 'string',
                 'max:20',
             ],
         ]);
 
+        $subscription = null;
+        $payment = null;
+
         try {
             /*
-             * 1. Create the subscription.
+             * 1. Create the pending subscription.
              */
             $subscription = $subscriptionService->createPending(
                 $request->user(),
@@ -42,68 +53,194 @@ class CheckoutController extends Controller
              */
             $payment = $paymentService->createPayment(
                 $subscription,
-                'mpesa'
+                $validated['payment_method']
             );
 
             /*
-             * 3. Ask M-Pesa to initiate STK Push.
+             * 3. Process payment using the selected provider.
              */
-           $response = $mpesaService->stkPush(
-                phone: $validated['phone'],
-                amount: (float) $payment->amount,
-                accountReference: $payment->transaction_reference,
-                transactionDescription: 'Silver Spoon subscription'
-            );
+            if ($validated['payment_method'] === 'mpesa') {
 
-            $payment->update([
-                'checkout_request_id' =>
-                    $response['CheckoutRequestID'] ?? null,
+                if (empty($validated['phone'])) {
+                    throw new \RuntimeException(
+                        'A phone number is required for M-Pesa payments.'
+                    );
+                }
 
-                'merchant_request_id' =>
-                    $response['MerchantRequestID'] ?? null,
+                /*
+                 * M-Pesa STK Push.
+                 */
+                $response = $mpesaService->stkPush(
+                    phone: $validated['phone'],
+                    amount: (float) $payment->amount,
+                    accountReference: $payment->transaction_reference,
+                    transactionDescription: 'Silver Spoon subscription'
+                );
 
-                'phone' => $validated['phone'],
+                /*
+                 * Save M-Pesa identifiers.
+                 */
+                $payment->update([
+                    'checkout_request_id' =>
+                        $response['CheckoutRequestID'] ?? null,
 
-                'provider_response' => json_encode(
-                    $response
-                ),
-            ]);
+                    'merchant_request_id' =>
+                        $response['MerchantRequestID'] ?? null,
+
+                    'phone' => $validated['phone'],
+
+                    'provider_response' => json_encode(
+                        $response
+                    ),
+                ]);
+
+                Log::info('M-Pesa STK Push initiated', [
+                    'payment_id' => $payment->id,
+                    'subscription_id' => $subscription->id,
+                    'checkout_request_id' =>
+                        $response['CheckoutRequestID'] ?? null,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'provider' => 'mpesa',
+                    'message' =>
+                        'Payment request sent. Please enter your M-Pesa PIN.',
+                    'payment_id' => $payment->id,
+                    'subscription_id' => $subscription->id,
+                    'checkout_request_id' =>
+                        $response['CheckoutRequestID'] ?? null,
+                ]);
+            }
 
             /*
-             * 4. Store the M-Pesa checkout identifier.
+             * Paystack Checkout.
              *
-             * We'll add proper columns for this shortly.
+             * Paystack will handle the actual payment UI.
              */
-            Log::info('M-Pesa STK Push initiated', [
-                'payment_id' => $payment->id,
-                'subscription_id' => $subscription->id,
-                'checkout_request_id' =>
-                    $response['CheckoutRequestID'] ?? null,
-            ]);
+            if ($validated['payment_method'] === 'paystack') {
 
-            return response()->json([
-                'success' => true,
-                'message' =>
-                    'Payment request sent. Please enter your M-Pesa PIN.',
-                'payment_id' => $payment->id,
-                'subscription_id' => $subscription->id,
-                'checkout_request_id' =>
-                    $response['CheckoutRequestID'] ?? null,
-            ]);
+                $user = $request->user();
+
+                if (!$user->email) {
+                    throw new \RuntimeException(
+                        'A valid email address is required for Paystack payments.'
+                    );
+                }
+
+                $response = $paystackService->initializeTransaction(
+                    email: $user->email,
+                    amount: (float) $payment->amount,
+                    reference: $payment->transaction_reference,
+                    callbackUrl: route('paystack.callback')
+                );
+
+                /*
+                 * Save the Paystack initialization response.
+                 */
+                $payment->update([
+                    'provider_response' => json_encode(
+                        $response
+                    ),
+                ]);
+
+                Log::info('Paystack transaction initialized', [
+                    'payment_id' => $payment->id,
+                    'subscription_id' => $subscription->id,
+                    'reference' =>
+                        $payment->transaction_reference,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'provider' => 'paystack',
+                    'message' =>
+                        'Payment initialized successfully.',
+                    'payment_id' => $payment->id,
+                    'subscription_id' => $subscription->id,
+                    'reference' =>
+                        $payment->transaction_reference,
+                    'authorization_url' =>
+                        $response['authorization_url'] ?? null,
+                ]);
+            }
+
+            throw new \RuntimeException(
+                'Unsupported payment provider.'
+            );
 
         } catch (Throwable $e) {
+
+            /*
+             * Payment initialization failed after we created
+             * the subscription/payment. Preserve the audit trail.
+             */
+            if ($payment) {
+                try {
+                    $paymentService->markFailed($payment);
+                } catch (Throwable $paymentException) {
+                    Log::error(
+                        'Failed to mark payment as failed',
+                        [
+                            'payment_id' => $payment->id,
+                            'error' =>
+                                $paymentException->getMessage(),
+                        ]
+                    );
+                }
+            }
+
+            if ($subscription) {
+                try {
+                    $subscription->update([
+                        'status' => 'cancelled',
+                    ]);
+                } catch (Throwable $subscriptionException) {
+                    Log::error(
+                        'Failed to cancel subscription after checkout failure',
+                        [
+                            'subscription_id' =>
+                                $subscription->id,
+                            'error' =>
+                                $subscriptionException->getMessage(),
+                        ]
+                    );
+                }
+            }
 
             Log::error('Silver Spoon checkout failed', [
                 'user_id' => $request->user()?->id,
                 'meal_plan_id' => $mealPlan->id,
+                'subscription_id' => $subscription?->id,
+                'payment_id' => $payment?->id,
+                'payment_method' =>
+                    $validated['payment_method'] ?? null,
                 'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage(),
+                'message' =>
+                    'Unable to initiate payment. Please try again.',
             ], 422);
         }
     }
-}
 
+
+    public function show(MealPlan $mealPlan)
+    {
+        if (!$mealPlan->is_active) {
+            abort(404);
+        }
+
+        $mealPlan->load([
+            'meals' => function ($query) {
+                $query->where('is_active', true)
+                    ->orderBy('day_of_week')
+                    ->orderBy('meal_type');
+            }
+        ]);
+
+        return view('checkout', compact('mealPlan'));
+    }
+}
