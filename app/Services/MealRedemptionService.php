@@ -253,7 +253,7 @@ class MealRedemptionService
                     'meal_id' => $entitlement->meal_id,
                     'redeemed_at' => $now,
                     'reference' => $this->generateReference(),
-                    'redeemed_by_user_id' => $userId,
+                    'redeemed_by_user_id' => null,
                 ]);
             });
         }

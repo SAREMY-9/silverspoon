@@ -11,6 +11,9 @@ use App\Http\Controllers\MealPlanController;
 use App\Http\Controllers\MealRedemptionController;
 use App\Http\Controllers\StaffMealController;
 use App\Http\Controllers\AdminMealReportController;
+use App\Http\Controllers\AdminMealDashboardController;
+use App\Http\Controllers\AdminMealController;
+use App\Http\Controllers\AdminMealPlanController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -179,5 +182,42 @@ Route::middleware('auth')->group(function () {
         '/admin/meals/report/export',
         [AdminMealReportController::class, 'export']
     )->name('admin.meals.report.export');
+
+
+    Route::get(
+        '/admin/meals/dashboard',
+        [AdminMealDashboardController::class, 'index']
+    )->name('admin.meals.dashboard');
+
+
+
+
+
+        // Meal administration
+    Route::prefix('admin')->group(function () {
+
+            Route::resource(
+                'meal-plans',
+                AdminMealPlanController::class
+            )->names('admin.meal-plans');
+
+            Route::post(
+                'meal-plans/{mealPlan}/toggle',
+                [AdminMealPlanController::class, 'toggle']
+            )->name('admin.meal-plans.toggle');
+
+
+            Route::resource(
+                'meals',
+                AdminMealController::class
+            )->names('admin.meals');
+
+            Route::post(
+                'meals/{meal}/toggle',
+                [AdminMealController::class, 'toggle']
+            )->name('admin.meals.toggle');
+
+        });
+
 
 });

@@ -61,12 +61,22 @@
 
         </div>
 
+       
         <a
+            href="{{ route('admin.meals.dashboard', request()->query()) }}"
+            class="bg-black text-white px-5 py-3 rounded-xl font-semibold text-center hover:bg-gray-800"
+        >
+            Back To Dashboard
+        </a>
+
+         <a
             href="{{ route('admin.meals.report.export', request()->query()) }}"
             class="bg-black text-white px-5 py-3 rounded-xl font-semibold text-center hover:bg-gray-800"
         >
             Export CSV
         </a>
+
+
 
     </div>
 
