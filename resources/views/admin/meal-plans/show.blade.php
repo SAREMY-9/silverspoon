@@ -10,7 +10,7 @@
     >
 
     <title>
-        {{ $mealPlan->name }} - Meal Plan
+        {{ $mealPlan->name }} - Weekly Menu
     </title>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -27,20 +27,27 @@
             </h1>
 
             <p class="text-xs text-gray-400">
-                Meal Plan Management
+                Weekly Menu Builder
             </p>
         </div>
 
-        <div class="flex items-center gap-4 text-sm">
+        <div class="flex items-center gap-4">
 
             <a
                 href="{{ route('admin.meal-plans.index') }}"
-                class="text-gray-300 hover:text-white"
+                class="text-sm text-gray-300 hover:text-white"
             >
                 Meal Plans
             </a>
 
-            <span>
+            <a
+                href="{{ route('admin.meals.index') }}"
+                class="text-sm text-gray-300 hover:text-white"
+            >
+                All Meals
+            </a>
+
+            <span class="text-sm">
                 {{ auth()->user()->name }}
             </span>
 
@@ -52,20 +59,8 @@
 
 <main class="max-w-7xl mx-auto px-6 py-8">
 
-    {{-- Back --}}
-    <div class="mb-6">
+    {{-- Flash Messages --}}
 
-        <a
-            href="{{ route('admin.meal-plans.index') }}"
-            class="text-sm text-gray-500 hover:text-black"
-        >
-            ← Back to Meal Plans
-        </a>
-
-    </div>
-
-
-    {{-- Flash messages --}}
     @if(session('success'))
 
         <div class="mb-6 rounded-xl border border-green-200 bg-green-50 px-5 py-4 text-green-800">
@@ -85,43 +80,12 @@
 
 
     {{-- Header --}}
+
     <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
 
         <div>
 
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-
-    <div>
-        <h1 class="text-3xl font-bold">
-            {{ $mealPlan->name }}
-        </h1>
-
-        <p class="text-gray-500 mt-2">
-            {{ $mealPlan->description ?: 'No description provided.' }}
-        </p>
-    </div>
-
-    <div class="flex gap-3">
-
-        <a
-            href="{{ route('admin.meal-plans.edit', $mealPlan) }}"
-            class="px-5 py-3 rounded-xl border border-gray-300 font-semibold hover:bg-gray-50"
-        >
-            Edit Plan
-        </a>
-
-        <a
-            href="{{ route('admin.meals.create', ['meal_plan_id' => $mealPlan->id]) }}"
-            class="px-5 py-3 rounded-xl bg-black text-white font-semibold hover:bg-gray-800"
-        >
-            + Add Meal
-        </a>
-
-    </div>
-
-</div>
-
-            <div class="flex items-center gap-3 mb-3">
+            <div class="flex items-center gap-3 mb-2">
 
                 <h2 class="text-3xl font-bold">
                     {{ $mealPlan->name }}
@@ -129,56 +93,60 @@
 
                 @if($mealPlan->is_active)
 
-                    <span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">
-                        ACTIVE
+                    <span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+                        Active
                     </span>
 
                 @else
 
-                    <span class="px-3 py-1 rounded-full bg-gray-200 text-gray-600 text-xs font-bold">
-                        INACTIVE
+                    <span class="px-3 py-1 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">
+                        Inactive
                     </span>
 
                 @endif
 
             </div>
 
-            @if($mealPlan->description)
-
-                <p class="text-gray-500 max-w-2xl">
-                    {{ $mealPlan->description }}
-                </p>
-
-            @endif
+            <p class="text-gray-500">
+                {{ $mealPlan->description ?: 'No description provided.' }}
+            </p>
 
         </div>
 
-<!--
+
         <div class="flex flex-wrap gap-3">
 
             <a
                 href="{{ route('admin.meal-plans.edit', $mealPlan) }}"
-                class="px-5 py-3 rounded-xl bg-black text-white font-semibold hover:bg-gray-800"
+                class="px-5 py-3 rounded-xl border border-gray-300 bg-white font-semibold hover:bg-gray-50"
             >
                 Edit Plan
             </a>
 
             <a
-                href="{{ route('admin.meals.create', ['meal_plan_id' => $mealPlan->id]) }}"
-                class="px-5 py-3 rounded-xl bg-gray-200 text-gray-900 font-semibold hover:bg-gray-300"
+                href="{{ route('admin.meals.index', ['meal_plan_id' => $mealPlan->id]) }}"
+                class="px-5 py-3 rounded-xl border border-gray-300 bg-white font-semibold hover:bg-gray-50"
+            >
+                All Meals
+            </a>
+
+            <a
+                href="{{ route('admin.meals.create', [
+                    'meal_plan_id' => $mealPlan->id
+                ]) }}"
+                class="px-5 py-3 rounded-xl bg-black text-white font-semibold hover:bg-gray-800"
             >
                 + Add Meal
             </a>
 
         </div>
 
- ----->
-
     </div>
 
 
-    {{-- Plan statistics --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    {{-- Plan Statistics --}}
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
 
         <div class="bg-white border rounded-2xl p-5">
 
@@ -188,22 +156,6 @@
 
             <p class="text-2xl font-bold mt-2">
                 KES {{ number_format($mealPlan->price, 2) }}
-            </p>
-
-        </div>
-
-
-        <div class="bg-white border rounded-2xl p-5">
-
-            <p class="text-sm text-gray-500">
-                Duration
-            </p>
-
-            <p class="text-2xl font-bold mt-2">
-                {{ $mealPlan->duration_days }}
-                <span class="text-sm font-medium text-gray-500">
-                    days
-                </span>
             </p>
 
         </div>
@@ -225,7 +177,24 @@
         <div class="bg-white border rounded-2xl p-5">
 
             <p class="text-sm text-gray-500">
-                Meals Configured
+                Duration
+            </p>
+
+            <p class="text-2xl font-bold mt-2">
+                {{ $mealPlan->duration_days }}
+
+                <span class="text-sm font-medium text-gray-500">
+                    days
+                </span>
+            </p>
+
+        </div>
+
+
+        <div class="bg-white border rounded-2xl p-5">
+
+            <p class="text-sm text-gray-500">
+                Meals Assigned
             </p>
 
             <p class="text-2xl font-bold mt-2">
@@ -237,289 +206,245 @@
     </div>
 
 
-    {{-- Weekly menu --}}
-    <div class="bg-white border rounded-2xl overflow-hidden">
+    {{-- Weekly Menu Header --}}
 
-        <div class="p-6 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="mb-5">
 
-            <div>
+        <h3 class="text-2xl font-bold">
+            Weekly Menu
+        </h3>
 
-                <h3 class="text-xl font-bold">
-                    Weekly Menu
-                </h3>
+        <p class="text-gray-500 mt-1">
+            Build the breakfast, lunch and supper schedule for this meal plan.
+        </p>
 
-                <p class="text-sm text-gray-500 mt-1">
-                    Meals configured for this plan.
-                </p>
-
-            </div>
-
-            <a
-                href="{{ route('admin.meals.index', ['meal_plan_id' => $mealPlan->id]) }}"
-                class="text-sm font-semibold text-gray-600 hover:text-black"
-            >
-                Manage All Meals →
-            </a>
-
-        </div>
+    </div>
 
 
-        @php
-            $days = [
-                1 => 'Monday',
-                2 => 'Tuesday',
-                3 => 'Wednesday',
-                4 => 'Thursday',
-                5 => 'Friday',
-                6 => 'Saturday',
-                7 => 'Sunday',
-            ];
-        @endphp
+    @php
+
+        $days = [
+            1 => 'Monday',
+            2 => 'Tuesday',
+            3 => 'Wednesday',
+            4 => 'Thursday',
+            5 => 'Friday',
+            6 => 'Saturday',
+            7 => 'Sunday',
+        ];
+
+        $mealTypes = [
+            'breakfast' => 'Breakfast',
+            'lunch' => 'Lunch',
+            'supper' => 'Supper',
+        ];
+
+    @endphp
 
 
-        <div class="divide-y">
+    {{-- Weekly Grid --}}
 
-            @foreach($days as $dayNumber => $dayName)
+    <div class="space-y-5">
 
-                @php
-                    $dayMeals = $mealPlan->meals
-                        ->where('day_of_week', $dayNumber);
-                @endphp
+        @foreach($days as $dayNumber => $dayName)
 
+            <div class="bg-white border rounded-2xl overflow-hidden">
 
-                <div class="p-6">
+                {{-- Day Header --}}
 
-                    <div class="flex flex-col lg:flex-row lg:items-start gap-5">
+                <div class="px-6 py-4 bg-gray-50 border-b">
 
-                        <div class="lg:w-32 flex-shrink-0">
+                    <div class="flex items-center justify-between">
 
-                            <h4 class="font-bold text-lg">
+                        <div>
+
+                            <h4 class="text-lg font-bold">
                                 {{ $dayName }}
                             </h4>
 
-                            <p class="text-xs text-gray-400">
+                            <p class="text-xs text-gray-500">
                                 Day {{ $dayNumber }}
                             </p>
 
                         </div>
 
-
-                        <div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-
-                            @foreach(['breakfast', 'lunch', 'supper'] as $type)
-
-                                @php
-                                    $meal = $dayMeals
-                                        ->firstWhere('meal_type', $type);
-                                @endphp
-
-
-                                <div class="border rounded-xl p-4">
-
-                                    <p class="text-xs uppercase tracking-wide font-bold text-gray-400 mb-2">
-                                        {{ ucfirst($type) }}
-                                    </p>
-
-
-                                    @if($meal)
-
-                                        <div class="flex gap-3">
-
-                                            @if($meal->image)
-
-                                                <img
-                                                    src="{{ asset('storage/' . $meal->image) }}"
-                                                    alt="{{ $meal->name }}"
-                                                    class="w-16 h-16 rounded-lg object-cover"
-                                                >
-
-                                            @endif
-
-
-                                            <div class="min-w-0 flex-1">
-
-                                                <p class="font-semibold truncate">
-                                                    {{ $meal->name }}
-                                                </p>
-
-                                                @if($meal->description)
-
-                                                    <p class="text-xs text-gray-500 mt-1 line-clamp-2">
-                                                        {{ $meal->description }}
-                                                    </p>
-
-                                                @endif
-
-                                                <div class="mt-3 flex items-center gap-2">
-
-                                                    @if($meal->is_active)
-
-                                                        <span class="text-xs font-semibold text-green-600">
-                                                            Active
-                                                        </span>
-
-                                                    @else
-
-                                                        <span class="text-xs font-semibold text-gray-400">
-                                                            Inactive
-                                                        </span>
-
-                                                    @endif
-
-                                                    <a
-                                                        href="{{ route('admin.meals.edit', $meal) }}"
-                                                        class="text-xs font-semibold text-black hover:underline"
-                                                    >
-                                                        Edit
-                                                    </a>
-
-                                                </div>
-
-                                            </div>
-
-                                        </div>
-
-                                    @else
-
-                                        <div class="py-4">
-
-                                            <p class="text-sm text-gray-400">
-                                                No meal configured
-                                            </p>
-
-                                            <a
-                                                href="{{ route('admin.meals.create', [
-                                                    'meal_plan_id' => $mealPlan->id,
-                                                    'day_of_week' => $dayNumber,
-                                                    'meal_type' => $type,
-                                                ]) }}"
-                                                class="inline-block mt-2 text-xs font-semibold text-black hover:underline"
-                                            >
-                                                + Add {{ ucfirst($type) }}
-                                            </a>
-
-                                        </div>
-
-                                    @endif
-
-                                </div>
-
-                            @endforeach
-
-                        </div>
+                        <span class="text-xs text-gray-400">
+                            {{ $mealPlan->meals
+                                ->where('day_of_week', $dayNumber)
+                                ->count()
+                            }}
+                            meal(s)
+                        </span>
 
                     </div>
 
                 </div>
 
-            @endforeach
 
-        </div>
+                {{-- Meal Slots --}}
 
-    </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x">
 
+                    @foreach($mealTypes as $type => $label)
 
-    {{-- All meals --}}
-    <div class="bg-white border rounded-2xl overflow-hidden mt-8">
+                        @php
 
-        <div class="p-6 border-b">
+                            $meal = $mealPlan->meals->first(
+                                function ($item) use ($dayNumber, $type) {
 
-            <h3 class="text-xl font-bold">
-                All Meals in This Plan
-            </h3>
+                                    return
+                                        (int) $item->day_of_week === $dayNumber
+                                        &&
+                                        $item->meal_type === $type;
 
-            <p class="text-sm text-gray-500 mt-1">
-                {{ $mealPlan->meals->count() }}
-                {{ $mealPlan->meals->count() === 1 ? 'meal' : 'meals' }}
-                configured.
-            </p>
+                                }
+                            );
 
-        </div>
+                        @endphp
 
 
-        @if($mealPlan->meals->isEmpty())
+                        <div class="p-5 min-h-[260px]">
 
-            <div class="p-10 text-center">
+                            {{-- Slot Header --}}
 
-                <p class="text-gray-500">
-                    No meals have been configured for this plan yet.
-                </p>
+                            <div class="flex items-center justify-between mb-4">
 
-                <a
-                    href="{{ route('admin.meals.create', ['meal_plan_id' => $mealPlan->id]) }}"
-                    class="inline-block mt-4 bg-black text-white px-5 py-3 rounded-xl font-semibold"
-                >
-                    + Add First Meal
-                </a>
+                                <h5 class="font-semibold">
+                                    {{ $label }}
+                                </h5>
 
-            </div>
+                                @if($meal)
 
-        @else
+                                    @if($meal->is_active)
 
-            <div class="overflow-x-auto">
+                                        <span class="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
+                                            Active
+                                        </span>
 
-                <table class="w-full text-sm">
+                                    @else
 
-                    <thead class="bg-gray-50">
+                                        <span class="text-xs px-2 py-1 rounded-full bg-gray-200 text-gray-600">
+                                            Inactive
+                                        </span>
 
-                        <tr>
+                                    @endif
 
-                            <th class="text-left px-6 py-4">
-                                Meal
-                            </th>
+                                @else
 
-                            <th class="text-left px-6 py-4">
-                                Day
-                            </th>
+                                    <span class="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
+                                        Empty
+                                    </span>
 
-                            <th class="text-left px-6 py-4">
-                                Type
-                            </th>
+                                @endif
 
-                            <th class="text-left px-6 py-4">
-                                Status
-                            </th>
-
-                            <th class="text-right px-6 py-4">
-                                Actions
-                            </th>
-
-                        </tr>
-
-                    </thead>
+                            </div>
 
 
-                    <tbody class="divide-y">
+                            {{-- OCCUPIED SLOT --}}
 
-                        @foreach($mealPlan->meals as $meal)
+                            @if($meal)
 
-                            <tr class="hover:bg-gray-50">
+                                <div class="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
 
-                                <td class="px-6 py-4">
+                                    {{-- Image --}}
 
-                                    <div class="flex items-center gap-3">
+                                    @if($meal->image)
 
-                                        @if($meal->image)
+                                        <img
+                                            src="{{ asset('storage/' . $meal->image) }}"
+                                            alt="{{ $meal->name }}"
+                                            class="h-36 w-full object-cover"
+                                        >
 
-                                            <img
-                                                src="{{ asset('storage/' . $meal->image) }}"
-                                                alt="{{ $meal->name }}"
-                                                class="w-12 h-12 rounded-lg object-cover"
-                                            >
+                                    @else
+
+                                        <div class="h-36 bg-gray-100 flex items-center justify-center">
+
+                                            <span class="text-gray-400 text-sm">
+                                                No image
+                                            </span>
+
+                                        </div>
+
+                                    @endif
+
+
+                                    <div class="p-4">
+
+                                        <h4 class="font-semibold text-gray-900">
+                                            {{ $meal->name }}
+                                        </h4>
+
+
+                                        <p class="mt-1 text-xs text-gray-500">
+                                            {{ ucfirst($meal->meal_type) }}
+                                        </p>
+
+
+                                        @if($meal->description)
+
+                                            <p class="mt-3 text-sm text-gray-500 line-clamp-2">
+                                                {{ $meal->description }}
+                                            </p>
 
                                         @endif
 
-                                        <div>
 
-                                            <p class="font-semibold">
-                                                {{ $meal->name }}
-                                            </p>
+                                        {{-- Actions --}}
 
-                                            @if($meal->description)
+                                        <div class="mt-4 grid grid-cols-2 gap-2">
 
-                                                <p class="text-xs text-gray-500 max-w-md truncate">
-                                                    {{ $meal->description }}
-                                                </p>
+                                            {{-- Edit / Replace --}}
+
+                                            <a
+                                                href="{{ route('admin.meals.edit', $meal) }}"
+                                                class="rounded-lg bg-indigo-50 px-3 py-2 text-center text-xs
+                                                    font-medium text-indigo-700 hover:bg-indigo-100"
+                                            >
+                                                Edit / Replace
+                                            </a>
+
+
+                                            {{-- Remove / Restore --}}
+
+                                            @if($meal->is_active)
+
+                                                <form
+                                                    method="POST"
+                                                    action="{{ route('admin.meals.toggle', $meal) }}"
+                                                    onsubmit="return confirm('Remove this meal from the weekly menu? The meal will be deactivated but its history will be preserved.');"
+                                                >
+
+                                                    @csrf
+
+                                                    <button
+                                                        type="submit"
+                                                        class="w-full rounded-lg bg-red-50 px-3 py-2 text-xs
+                                                            font-medium text-red-700 hover:bg-red-100"
+                                                    >
+                                                        Remove
+                                                    </button>
+
+                                                </form>
+
+                                            @else
+
+                                                <form
+                                                    method="POST"
+                                                    action="{{ route('admin.meals.toggle', $meal) }}"
+                                                >
+
+                                                    @csrf
+
+                                                    <button
+                                                        type="submit"
+                                                        class="w-full rounded-lg bg-green-50 px-3 py-2 text-xs
+                                                            font-medium text-green-700 hover:bg-green-100"
+                                                    >
+                                                        Restore
+                                                    </button>
+
+                                                </form>
 
                                             @endif
 
@@ -527,84 +452,73 @@
 
                                     </div>
 
-                                </td>
+                                </div>
 
 
-                                <td class="px-6 py-4">
-                                    {{ $days[$meal->day_of_week] ?? 'Unknown' }}
-                                </td>
+                            {{-- EMPTY SLOT --}}
 
+                            @else
 
-                                <td class="px-6 py-4">
+                                <div class="h-36 rounded-xl border-2 border-dashed border-gray-200
+                                    flex flex-col items-center justify-center">
 
-                                    <span class="inline-flex px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold">
-                                        {{ ucfirst($meal->meal_type) }}
-                                    </span>
-
-                                </td>
-
-
-                                <td class="px-6 py-4">
-
-                                    @if($meal->is_active)
-
-                                        <span class="text-green-600 font-semibold">
-                                            Active
-                                        </span>
-
-                                    @else
-
-                                        <span class="text-gray-400 font-semibold">
-                                            Inactive
-                                        </span>
-
-                                    @endif
-
-                                </td>
-
-
-                                <td class="px-6 py-4">
-
-                                    <div class="flex justify-end gap-3">
-
-                                        <a
-                                            href="{{ route('admin.meals.edit', $meal) }}"
-                                            class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold"
-                                        >
-                                            Edit
-                                        </a>
-
-                                        <form
-                                            method="POST"
-                                            action="{{ route('admin.meals.toggle', $meal) }}"
-                                        >
-
-                                            @csrf
-
-                                            <button
-                                                type="submit"
-                                                class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold"
-                                            >
-                                                {{ $meal->is_active ? 'Deactivate' : 'Activate' }}
-                                            </button>
-
-                                        </form>
-
+                                    <div class="text-3xl text-gray-300 mb-2">
+                                        +
                                     </div>
 
-                                </td>
+                                    <p class="text-sm text-gray-400">
+                                        No {{ strtolower($label) }} assigned
+                                    </p>
 
-                            </tr>
+                                </div>
 
-                        @endforeach
 
-                    </tbody>
+                                <a
+                                    href="{{ route('admin.meals.create', [
+                                        'meal_plan_id' => $mealPlan->id,
+                                        'day_of_week' => $dayNumber,
+                                        'meal_type' => $type,
+                                    ]) }}"
+                                    class="block text-center mt-4 px-4 py-3 rounded-xl bg-black text-white
+                                        text-sm font-semibold hover:bg-gray-800"
+                                >
+                                    + Add {{ $label }}
+                                </a>
 
-                </table>
+                            @endif
+
+                        </div>
+
+                    @endforeach
+
+                </div>
 
             </div>
 
-        @endif
+        @endforeach
+
+    </div>
+
+
+    {{-- Bottom Navigation --}}
+
+    <div class="mt-8 flex flex-wrap gap-3">
+
+        <a
+            href="{{ route('admin.meal-plans.index') }}"
+            class="px-5 py-3 rounded-xl border border-gray-300 bg-white font-semibold hover:bg-gray-50"
+        >
+            ← Back to Meal Plans
+        </a>
+
+        <a
+            href="{{ route('admin.meals.index', [
+                'meal_plan_id' => $mealPlan->id
+            ]) }}"
+            class="px-5 py-3 rounded-xl border border-gray-300 bg-white font-semibold hover:bg-gray-50"
+        >
+            Manage All Meals
+        </a>
 
     </div>
 

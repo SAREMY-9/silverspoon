@@ -126,7 +126,7 @@ class AdminMealController extends Controller
     }
 
 
-    
+
     public function store(Request $request): RedirectResponse
     {
         $this->ensureAdmin($request);
@@ -178,6 +178,23 @@ class AdminMealController extends Controller
             $validated['image'] =
                 $request->file('image')
                     ->store('meals', 'public');
+        }
+
+
+        
+        $exists = Meal::query()
+            ->where('meal_plan_id', $validated['meal_plan_id'])
+            ->where('day_of_week', $validated['day_of_week'])
+            ->where('meal_type', $validated['meal_type'])
+            ->exists();
+
+        if ($exists) {
+            return back()
+                ->withInput()
+                ->with(
+                    'error',
+                    'A meal already exists for this day and meal type.'
+                );
         }
 
         $meal = Meal::create($validated);

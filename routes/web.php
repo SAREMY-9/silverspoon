@@ -14,12 +14,12 @@ use App\Http\Controllers\AdminMealReportController;
 use App\Http\Controllers\AdminMealDashboardController;
 use App\Http\Controllers\AdminMealController;
 use App\Http\Controllers\AdminMealPlanController;
+use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-})->name('home');
 
+Route::get('/', [HomeController::class, 'index'])
+    ->name('home');
 
 /*
 |--------------------------------------------------------------------------

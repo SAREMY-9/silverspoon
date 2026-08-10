@@ -706,8 +706,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
-<script>
 
+@if($activeSubscription)
+
+<script>
 new QRCode(
     document.getElementById('customer-qr'),
     {
@@ -717,9 +719,30 @@ new QRCode(
         correctLevel: QRCode.CorrectLevel.H
     }
 );
-
 </script>
 
-</body>
+@else
 
+<script>
+const qrContainer = document.getElementById('customer-qr');
+
+if (qrContainer) {
+    qrContainer.innerHTML = `
+        <div class="text-center p-6">
+            <p class="text-gray-500 text-sm">
+                No active subscription
+            </p>
+            <a
+                href="{{ route('meal-plans.index') }}"
+                class="inline-block mt-3 px-4 py-2 bg-black text-white rounded-lg text-sm font-semibold"
+            >
+                Browse Meal Plans
+            </a>
+        </div>
+    `;
+}
+</script>
+
+@endif
+</body>
 </html>

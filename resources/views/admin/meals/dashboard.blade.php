@@ -22,40 +22,111 @@
 
 <nav class="bg-black text-white">
 
-    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-6 py-4">
 
-        <div>
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
 
-            <h1 class="font-bold text-lg">
-                Silver Spoon
-            </h1>
+            {{-- BRAND --}}
 
-            <p class="text-xs text-gray-400">
-                Meal Operations Dashboard
-            </p>
+            <div>
 
-        </div>
+                <a href="{{ route('admin.meals.dashboard') }}"
+                   class="block">
+
+                    <h1 class="font-bold text-lg">
+                        Silver Spoon
+                    </h1>
+
+                    <p class="text-xs text-gray-400">
+                        Meal Operations
+                    </p>
+
+                </a>
+
+            </div>
 
 
-        <div class="flex items-center gap-6 text-sm">
+            {{-- NAVIGATION --}}
 
-            <a
-                href="{{ route('admin.meals.report') }}"
-                class="text-gray-300 hover:text-white"
-            >
-                Service Reports
-            </a>
+            <div class="flex flex-wrap items-center gap-2 text-sm">
 
-            <span>
-                {{ auth()->user()->name }}
-            </span>
+                {{-- Operations Dashboard --}}
+
+                <a
+                    href="{{ route('admin.meals.dashboard') }}"
+                    class="px-3 py-2 rounded-lg
+                           bg-white/10 text-white
+                           hover:bg-white/20"
+                >
+                    Dashboard
+                </a>
+
+
+                {{-- Meal Plans --}}
+
+                <a
+                    href="{{ route('admin.meal-plans.index') }}"
+                    class="px-3 py-2 rounded-lg
+                           text-gray-300 hover:text-white
+                           hover:bg-white/10"
+                >
+                    Meal Plans
+                </a>
+
+
+                {{-- Meals --}}
+
+                <a
+                    href="{{ route('admin.meals.index') }}"
+                    class="px-3 py-2 rounded-lg
+                           text-gray-300 hover:text-white
+                           hover:bg-white/10"
+                >
+                    Meals
+                </a>
+
+
+                {{-- Reports --}}
+
+                <a
+                    href="{{ route('admin.meals.report') }}"
+                    class="px-3 py-2 rounded-lg
+                           text-gray-300 hover:text-white
+                           hover:bg-white/10"
+                >
+                    Reports
+                </a>
+
+
+                {{-- Scanner --}}
+
+                <a
+                    href="{{ route('staff.meals.scan') }}"
+                    class="px-3 py-2 rounded-lg
+                           text-gray-300 hover:text-white
+                           hover:bg-white/10"
+                >
+                    Scanner
+                </a>
+
+
+                {{-- USER --}}
+
+                <div class="ml-2 pl-3 border-l border-gray-700">
+
+                    <span class="text-gray-300">
+                        {{ auth()->user()->name }}
+                    </span>
+
+                </div>
+
+            </div>
 
         </div>
 
     </div>
 
 </nav>
-
 
 <main class="max-w-7xl mx-auto px-6 py-8">
 
@@ -684,26 +755,197 @@
 
 
 
-    {{-- QUICK LINKS --}}
+{{-- QUICK LINKS --}}
 
-    <div class="flex flex-col md:flex-row gap-3">
+<div class="mb-8">
+
+    <div class="mb-5">
+
+        <h3 class="text-xl font-bold">
+            Quick Actions
+        </h3>
+
+        <p class="text-sm text-gray-500 mt-1">
+            Manage menus, meals and today's operations.
+        </p>
+
+    </div>
+
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+
+        {{-- Meal Plans --}}
 
         <a
-            href="{{ route('admin.meals.report') }}"
-            class="bg-black text-white px-5 py-3 rounded-xl font-semibold text-center"
+            href="{{ route('admin.meal-plans.index') }}"
+            class="group bg-white border rounded-2xl p-5
+                   hover:border-black hover:shadow-sm transition"
         >
-            View Full Service History
+
+            <div class="flex items-center justify-between">
+
+                <div class="text-2xl">
+                    📋
+                </div>
+
+                <span class="text-gray-400 group-hover:text-black">
+                    →
+                </span>
+
+            </div>
+
+            <h4 class="font-bold mt-4">
+                Create Meal
+            </h4>
+
+            <p class="text-sm text-gray-500 mt-1">
+                Create and manage subscription plans.
+            </p>
+
         </a>
 
 
+        {{-- Meals --}}
+
         <a
-            href="{{ route('admin.meals.report.export') }}"
-            class="bg-white border px-5 py-3 rounded-xl font-semibold text-center"
+            href="{{ route('admin.meals.index') }}"
+            class="group bg-white border rounded-2xl p-5
+                   hover:border-black hover:shadow-sm transition"
         >
-            Export Today's CSV
+
+            <div class="flex items-center justify-between">
+
+                <div class="text-2xl">
+                    🍽️
+                </div>
+
+                <span class="text-gray-400 group-hover:text-black">
+                    →
+                </span>
+
+            </div>
+
+            <h4 class="font-bold mt-4">
+                Manage Meals
+            </h4>
+
+            <p class="text-sm text-gray-500 mt-1">
+                Add, edit, activate or remove meals.
+            </p>
+
+        </a>
+
+
+        {{-- Add Meal --}}
+
+        <a
+            href="{{ route('admin.meals.create') }}"
+            class="group bg-white border rounded-2xl p-5
+                   hover:border-black hover:shadow-sm transition"
+        >
+
+            <div class="flex items-center justify-between">
+
+                <div class="text-2xl">
+                    ➕
+                </div>
+
+                <span class="text-gray-400 group-hover:text-black">
+                    →
+                </span>
+
+            </div>
+
+            <h4 class="font-bold mt-4">
+                Add Meal
+            </h4>
+
+            <p class="text-sm text-gray-500 mt-1">
+                Create a meal for a meal plan.
+            </p>
+
+        </a>
+
+
+        {{-- Scanner --}}
+
+        <a
+            href="{{ route('staff.meals.scan') }}"
+            class="group bg-black text-white rounded-2xl p-5
+                   hover:bg-gray-800 transition"
+        >
+
+            <div class="flex items-center justify-between">
+
+                <div class="text-2xl">
+                    📱
+                </div>
+
+                <span class="text-gray-400 group-hover:text-white">
+                    →
+                </span>
+
+            </div>
+
+            <h4 class="font-bold mt-4">
+                Meal Scanner
+            </h4>
+
+            <p class="text-sm text-gray-400 mt-1">
+                Scan customer QR codes and serve meals.
+            </p>
+
         </a>
 
     </div>
+
+</div>
+
+
+{{-- REPORTING --}}
+
+<div class="bg-white border rounded-2xl p-6 mb-8">
+
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+
+        <div>
+
+            <h3 class="text-xl font-bold">
+                Reporting & Analytics
+            </h3>
+
+            <p class="text-sm text-gray-500 mt-1">
+                Review historical meal service and export operational data.
+            </p>
+
+        </div>
+
+
+        <div class="flex flex-wrap gap-3">
+
+            <a
+                href="{{ route('admin.meals.report') }}"
+                class="px-5 py-3 rounded-xl bg-black text-white
+                       font-semibold text-sm hover:bg-gray-800"
+            >
+                Service History
+            </a>
+
+
+            <a
+                href="{{ route('admin.meals.report.export') }}"
+                class="px-5 py-3 rounded-xl border border-gray-300
+                       bg-white font-semibold text-sm hover:bg-gray-50"
+            >
+                Export CSV
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
 
 
 </main>
