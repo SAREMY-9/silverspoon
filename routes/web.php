@@ -10,6 +10,7 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\MealPlanController;
 use App\Http\Controllers\MealRedemptionController;
 use App\Http\Controllers\StaffMealController;
+use App\Http\Controllers\AdminMealReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -161,6 +162,22 @@ Route::middleware('auth')->group(function () {
         [StaffMealController::class, 'summary']
     )->name('staff.meals.summary');
 
-    
+
+
+});
+
+
+
+Route::middleware('auth')->group(function () {
+
+    Route::get(
+        '/admin/meals/report',
+        [AdminMealReportController::class, 'index']
+    )->name('admin.meals.report');
+
+    Route::get(
+        '/admin/meals/report/export',
+        [AdminMealReportController::class, 'export']
+    )->name('admin.meals.report.export');
 
 });
