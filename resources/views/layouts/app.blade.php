@@ -41,7 +41,7 @@
                 {{-- BRAND --}}
 
                 <a
-                    href="{{ route('admin.dashboard') }}"
+                    href="{{ route('home') }}"
                     class="flex items-center gap-2"
                 >
                     <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white">
@@ -237,7 +237,7 @@
                     {{-- Dashboard --}}
 
                     <a
-                        href="{{ route('dashboard') }}"
+                        href="{{ route('home') }}"
                         class="whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium
                         {{ request()->routeIs('dashboard')
                             ? 'bg-slate-900 text-white'

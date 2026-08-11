@@ -36,6 +36,29 @@
                 </p>
             </div>
 
+
+            <a
+    href="{{ route('home') }}"
+    class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+>
+    <svg
+        class="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+    >
+        <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M3 12l9-9 9 9M5 10v10h14V10"
+        />
+    </svg>
+
+    Dashboard
+</a>
+
+
             <div class="text-sm">
                 {{ auth()->user()->name }}
             </div>
