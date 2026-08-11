@@ -76,11 +76,23 @@ class PaymentService
                 );
             }
 
+            /*
+ * A cancelled subscription must never be resurrected
+ * by an old payment callback.
+ */
+            if ($subscription->status === SubscriptionStatus::CANCELLED) {
+                throw new RuntimeException(
+                    'This subscription is no longer active.'
+                );
+            }
+
             if ($subscription->status !== SubscriptionStatus::ACTIVE) {
                 $subscription->update([
                     'status' => SubscriptionStatus::ACTIVE,
                 ]);
             }
+
+            
 
             $this->createEntitlements($subscription);
 

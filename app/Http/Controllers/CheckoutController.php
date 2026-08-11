@@ -218,11 +218,15 @@ class CheckoutController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
+            $message = $e->getMessage();
+
             return response()->json([
                 'success' => false,
-                'message' =>
-                    'Unable to initiate payment. Please try again.',
+                'message' => $message !== ''
+                    ? $message
+                    : 'Unable to initiate payment. Please try again.',
             ], 422);
+            
         }
     }
 
