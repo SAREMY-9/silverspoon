@@ -14,89 +14,192 @@ use RuntimeException;
 class SubscriptionService
 {
     /**
-     * Create a pending subscription for a user.
+     * How long a pending payment attempt reserves
+     * the user's checkout slot.
+     */
+    protected int $paymentAttemptLifetime = 5;
+
+    /**
+     * Create or reuse a pending subscription.
      *
-     * An active subscription always blocks a new subscription.
+     * IMPORTANT:
      *
-     * A previous pending subscription is considered an abandoned
-     * checkout attempt and is cancelled before creating a new one.
+     * A failed/abandoned payment does NOT cancel the subscription.
+     *
+     * The subscription remains pending and can receive another
+     * payment attempt.
      */
     public function createPending(
-            User $user,
-            MealPlan $mealPlan
-        ): Subscription {
-            if (!$mealPlan->is_active) {
+        User $user,
+        MealPlan $mealPlan
+    ): Subscription {
+        if (!$mealPlan->is_active) {
+            throw new RuntimeException(
+                'This meal plan is currently unavailable.'
+            );
+        }
+
+        return DB::transaction(function () use (
+            $user,
+            $mealPlan
+        ) {
+
+            /*
+             * ---------------------------------------------------------
+             * 1. ACTIVE SUBSCRIPTION
+             * ---------------------------------------------------------
+             */
+            $activeSubscription = $user->subscriptions()
+                ->where(
+                    'status',
+                    SubscriptionStatus::ACTIVE
+                )
+                ->lockForUpdate()
+                ->first();
+
+            if ($activeSubscription) {
                 throw new RuntimeException(
-                    'This meal plan is currently unavailable.'
+                    'You already have an active subscription.'
                 );
             }
 
-            return DB::transaction(function () use ($user, $mealPlan) {
+            /*
+             * ---------------------------------------------------------
+             * 2. FIND EXISTING PENDING SUBSCRIPTION
+             * ---------------------------------------------------------
+             *
+             * We reuse the pending subscription instead of creating
+             * a new subscription every time the customer retries.
+             */
+            $pendingSubscription = $user->subscriptions()
+                ->where(
+                    'status',
+                    SubscriptionStatus::PENDING
+                )
+                ->latest()
+                ->lockForUpdate()
+                ->first();
+
+            /*
+             * ---------------------------------------------------------
+             * 3. EXISTING PENDING SUBSCRIPTION
+             * ---------------------------------------------------------
+             */
+            if ($pendingSubscription) {
 
                 /*
-                * Never allow multiple active subscriptions.
-                */
-                $activeSubscription = $user->subscriptions()
-                    ->where('status', 'active')
-                    ->first();
+                 * Find ALL pending payments.
+                 *
+                 * There should normally only be one, but checking all
+                 * protects us against duplicate attempts/race conditions.
+                 */
+                $pendingPayments = $pendingSubscription
+                    ->payments()
+                    ->where(
+                        'status',
+                        PaymentStatus::PENDING
+                    )
+                    ->lockForUpdate()
+                    ->get();
 
-                if ($activeSubscription) {
-                    throw new RuntimeException(
-                        'You already have an active subscription.'
-                    );
-                }
+                $hasLivePayment = false;
 
-                /*
-                * Look for an existing pending subscription.
-                */
-                $pendingSubscription = $user->subscriptions()
-                    ->where('status', 'pending')
-                    ->latest()
-                    ->first();
+                foreach ($pendingPayments as $pendingPayment) {
 
-                if ($pendingSubscription) {
+                    $expiresAt = $pendingPayment
+                        ->created_at
+                        ->copy()
+                        ->addMinutes(
+                            $this->paymentAttemptLifetime
+                        );
 
                     /*
-                    * Does this subscription still have a
-                    * payment waiting to be completed?
-                    */
-                    $hasPendingPayment = $pendingSubscription
-                        ->payments()
-                        ->where('status', 'pending')
-                        ->exists();
+                     * Still inside our local checkout reservation.
+                     */
+                    if (now()->lt($expiresAt)) {
 
-                    if ($hasPendingPayment) {
-                        throw new RuntimeException(
-                            'You already have a payment in progress. Please complete it or wait for it to expire.'
+                        $hasLivePayment = true;
+
+                        $remainingSeconds = now()
+                            ->diffInSeconds($expiresAt);
+
+                        $remainingMinutes = max(
+                            1,
+                            (int) ceil(
+                                $remainingSeconds / 60
+                            )
                         );
+
+                        break;
                     }
 
                     /*
-                    * No pending payment remains.
-                    *
-                    * This is an abandoned/incomplete subscription
-                    * attempt, so cancel it and allow a fresh attempt.
-                    */
-                    $pendingSubscription->update([
-                        'status' => 'cancelled',
+                     * Our local reservation has expired.
+                     *
+                     * This does NOT necessarily mean Paystack
+                     * failed the transaction.
+                     *
+                     * It only means Silver Spoon will no longer
+                     * block a new checkout attempt because of it.
+                     */
+                    $pendingPayment->update([
+                        'status' => PaymentStatus::FAILED,
                     ]);
                 }
 
                 /*
-                * Create a completely new subscription attempt.
-                */
-                return $user->subscriptions()->create([
+                 * A live payment still exists.
+                 */
+                if ($hasLivePayment) {
+                    throw new RuntimeException(
+                        'You already have a payment in progress. '
+                        . 'Please complete it or wait '
+                        . $remainingMinutes
+                        . ' minute(s) before trying again.'
+                    );
+                }
+
+                /*
+                 * No payment is currently active.
+                 *
+                 * Reuse the existing pending subscription.
+                 *
+                 * Reset the subscription dates because this is now
+                 * a fresh checkout attempt.
+                 */
+                
+                $pendingSubscription->update([
                     'meal_plan_id' => $mealPlan->id,
-                    'starts_at' => now(),
-                    'ends_at' => now()
-                        ->addDays($mealPlan->duration_days - 1)
-                        ->endOfDay(),
-                    'status' => 'pending',
-                    'access_code' => $this->generateAccessCode(),
-                    'qr_token' => (string) Str::uuid(),
+                    'starts_at' => null,
+                    'ends_at' => null,
                 ]);
-            });
-        }
+
+                return $pendingSubscription->fresh();
+            }
+
+            /*
+             * ---------------------------------------------------------
+             * 4. NO PENDING SUBSCRIPTION
+             * ---------------------------------------------------------
+             *
+             * Create a completely new checkout/subscription.
+             */
+            return $user->subscriptions()->create([
+                'meal_plan_id' => $mealPlan->id,
+
+                'starts_at' => null,
+                'ends_at' => null,
+
+                'status' => SubscriptionStatus::PENDING,
+
+                'access_code' => $this->generateAccessCode(),
+
+                'qr_token' => (string) Str::uuid(),
+            ]);
+
+        });
+    }
+
     /**
      * Generate a unique customer access code.
      */

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PaymentStatus;
+use App\Enums\SubscriptionStatus;
 use App\Models\MealPlan;
 use App\Models\Payment;
 use App\Services\Payments\PaystackService;
@@ -10,7 +12,7 @@ use App\Services\SubscriptionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use App\Enums\SubscriptionStatus;
+use RuntimeException;
 use Throwable;
 
 class PaystackController extends Controller
@@ -31,8 +33,11 @@ class PaystackController extends Controller
         $payment = null;
 
         try {
+
             /*
-             * 1. Create the pending subscription.
+             * ---------------------------------------------------------
+             * 1. CREATE/REUSE PENDING SUBSCRIPTION
+             * ---------------------------------------------------------
              */
             $subscription = $subscriptionService->createPending(
                 $user,
@@ -40,7 +45,9 @@ class PaystackController extends Controller
             );
 
             /*
-             * 2. Create our internal pending payment.
+             * ---------------------------------------------------------
+             * 2. CREATE PAYMENT ATTEMPT
+             * ---------------------------------------------------------
              */
             $payment = $paymentService->createPayment(
                 $subscription,
@@ -48,10 +55,9 @@ class PaystackController extends Controller
             );
 
             /*
-             * 3. Initialize Paystack transaction.
-             *
-             * Payment amount is stored in KES.
-             * PaystackService converts it to kobo/cents.
+             * ---------------------------------------------------------
+             * 3. INITIALIZE PAYSTACK
+             * ---------------------------------------------------------
              */
             $response = $paystackService->initializeTransaction(
                 email: $user->email,
@@ -61,47 +67,99 @@ class PaystackController extends Controller
             );
 
             /*
-             * 4. Store Paystack initialization response.
+             * Paystack must give us an authorization URL.
              */
-            $payment->update([
-                'provider_response' => json_encode($response),
-            ]);
-
-            Log::info('Paystack transaction initialized', [
-                'payment_id' => $payment->id,
-                'subscription_id' => $subscription->id,
-                'reference' => $payment->transaction_reference,
-            ]);
+            if (
+                empty($response['authorization_url'])
+            ) {
+                throw new RuntimeException(
+                    'Paystack did not return an authorization URL.'
+                );
+            }
 
             /*
-             * 5. Give the frontend the Paystack checkout URL.
+             * ---------------------------------------------------------
+             * 4. SAVE PROVIDER RESPONSE
+             * ---------------------------------------------------------
+             */
+            $payment->update([
+                'provider_response' => json_encode(
+                    $response,
+                    JSON_THROW_ON_ERROR
+                ),
+            ]);
+
+            Log::info(
+                'Paystack transaction initialized',
+                [
+                    'payment_id' =>
+                        $payment->id,
+
+                    'subscription_id' =>
+                        $subscription->id,
+
+                    'reference' =>
+                        $payment->transaction_reference,
+
+                    'amount' =>
+                        $payment->amount,
+                ]
+            );
+
+            /*
+             * ---------------------------------------------------------
+             * 5. RETURN CHECKOUT URL
+             * ---------------------------------------------------------
              */
             return response()->json([
                 'success' => true,
-                'message' => 'Payment initialized successfully.',
-                'payment_id' => $payment->id,
-                'subscription_id' => $subscription->id,
-                'reference' => $payment->transaction_reference,
+
+                'message' =>
+                    'Payment initialized successfully.',
+
+                'payment_id' =>
+                    $payment->id,
+
+                'subscription_id' =>
+                    $subscription->id,
+
+                'reference' =>
+                    $payment->transaction_reference,
+
                 'authorization_url' =>
-                    $response['authorization_url'] ?? null,
+                    $response['authorization_url'],
             ]);
 
         } catch (Throwable $e) {
 
             /*
-             * Paystack initialization failed after we created
-             * the subscription/payment.
+             * ---------------------------------------------------------
+             * INITIALIZATION FAILED
+             * ---------------------------------------------------------
              *
-             * Preserve the audit trail but invalidate this attempt.
+             * This means Paystack checkout was NOT successfully
+             * handed to the customer.
+             *
+             * Therefore it is safe to invalidate the payment attempt.
              */
             if ($payment) {
                 try {
-                    $paymentService->markFailed($payment);
+                    if (
+                        $payment->status ===
+                        PaymentStatus::PENDING
+                    ) {
+                        $paymentService->markFailed(
+                            $payment
+                        );
+                    }
                 } catch (Throwable $paymentException) {
+
                     Log::error(
-                        'Failed to mark Paystack payment as failed',
+                        'Failed to mark Paystack initialization payment as failed',
                         [
-                            'payment_id' => $payment->id,
+                            'payment_id' =>
+                                $payment->id,
+
                             'error' =>
                                 $paymentException->getMessage(),
                         ]
@@ -109,33 +167,40 @@ class PaystackController extends Controller
                 }
             }
 
-            if ($subscription) {
-                try {
-                    $subscription->update([
-                        'status' => 'cancelled',
-                    ]);
-                } catch (Throwable $subscriptionException) {
-                    Log::error(
-                        'Failed to cancel subscription after Paystack failure',
-                        [
-                            'subscription_id' => $subscription->id,
-                            'error' =>
-                                $subscriptionException->getMessage(),
-                        ]
-                    );
-                }
-            }
+            /*
+             * IMPORTANT:
+             *
+             * DO NOT CANCEL THE SUBSCRIPTION.
+             *
+             * The customer should be able to retry using the same
+             * pending subscription.
+             */
+            Log::error(
+                'Paystack checkout initialization failed',
+                [
+                    'user_id' =>
+                        $user?->id,
 
-            Log::error('Paystack checkout failed', [
-                'user_id' => $user?->id,
-                'meal_plan_id' => $mealPlan->id,
-                'subscription_id' => $subscription?->id,
-                'payment_id' => $payment?->id,
-                'error' => $e->getMessage(),
-            ]);
+                    'meal_plan_id' =>
+                        $mealPlan->id,
+
+                    'subscription_id' =>
+                        $subscription?->id,
+
+                    'payment_id' =>
+                        $payment?->id,
+
+                    'error' =>
+                        $e->getMessage(),
+
+                    'exception' =>
+                        get_class($e),
+                ]
+            );
 
             return response()->json([
                 'success' => false,
+
                 'message' =>
                     'Unable to initialize Paystack payment. Please try again.',
             ], 422);
@@ -143,103 +208,224 @@ class PaystackController extends Controller
     }
 
     /**
- * Paystack redirects the customer here after checkout.
- *
- * We NEVER trust the redirect alone.
- * The transaction is verified against Paystack.
- */
+     * Paystack redirects the customer here after checkout.
+     *
+     * NEVER trust the redirect itself.
+     *
+     * Always verify the transaction directly with Paystack.
+     */
     public function callback(
-            Request $request,
-            PaystackService $paystackService,
-            PaymentService $paymentService
-        ) {
-            $reference = $request->query('reference');
+        Request $request,
+        PaystackService $paystackService,
+        PaymentService $paymentService
+    ) {
+        $reference = trim(
+            (string) $request->query('reference')
+        );
 
-            if (!$reference) {
+        if ($reference === '') {
+            return redirect()
+                ->route('dashboard')
+                ->with(
+                    'error',
+                    'Payment reference is missing. Please try again.'
+                );
+        }
+
+        /*
+         * -------------------------------------------------------------
+         * 1. FIND OUR PAYMENT
+         * -------------------------------------------------------------
+         */
+        $payment = Payment::where(
+            'transaction_reference',
+            $reference
+        )->first();
+
+        if (!$payment) {
+
+            Log::error(
+                'Paystack payment not found',
+                [
+                    'reference' =>
+                        $reference,
+                ]
+            );
+
+            return redirect()
+                ->route('dashboard')
+                ->with(
+                    'error',
+                    'We could not find your payment record. Please contact support.'
+                );
+        }
+
+        try {
+
+            /*
+             * ---------------------------------------------------------
+             * 2. IDEMPOTENCY
+             * ---------------------------------------------------------
+             */
+            if (
+                $payment->status ===
+                PaymentStatus::SUCCESSFUL
+            ) {
+
                 return redirect()
                     ->route('dashboard')
-                    ->with('error', 'Payment reference is missing. Please try again.');
+                    ->with(
+                        'success',
+                        'Payment successful! Your Silver Spoon subscription is active.'
+                    );
             }
 
-            try {
-                /*
-                * 1. Verify directly with Paystack.
-                */
-                $transaction = $paystackService->verifyTransaction($reference);
-
-                /*
-                * 2. Find our internal payment.
-                */
-                $payment = Payment::where(
-                    'transaction_reference',
+            /*
+             * ---------------------------------------------------------
+             * 3. VERIFY WITH PAYSTACK
+             * ---------------------------------------------------------
+             */
+            $transaction =
+                $paystackService->verifyTransaction(
                     $reference
-                )->first();
+                );
 
-                if (!$payment) {
-                    Log::error('Paystack payment not found', [
-                        'reference' => $reference,
-                    ]);
+            /*
+             * ---------------------------------------------------------
+             * 4. SAVE COMPLETE PROVIDER RESPONSE
+             * ---------------------------------------------------------
+             */
+            $payment->update([
+                'provider_response' => json_encode(
+                    $transaction,
+                    JSON_THROW_ON_ERROR
+                ),
+            ]);
 
-                    return redirect()
-                        ->route('dashboard')
-                        ->with(
-                            'error',
-                            'We could not find your payment record. Please contact support.'
-                        );
-                }
+            $status = strtolower(
+                trim(
+                    (string) (
+                        $transaction['status'] ?? ''
+                    )
+                )
+            );
+
+            Log::info(
+                'Paystack transaction verified',
+                [
+                    'payment_id' =>
+                        $payment->id,
+
+                    'subscription_id' =>
+                        $payment->subscription_id,
+
+                    'reference' =>
+                        $reference,
+
+                    'status' =>
+                        $status,
+                ]
+            );
+
+            /*
+             * ---------------------------------------------------------
+             * 5. SUCCESS
+             * ---------------------------------------------------------
+             */
+            if ($status === 'success') {
 
                 /*
-                * 3. Store the complete Paystack response.
-                */
-                $payment->update([
-                    'provider_response' => json_encode($transaction),
-                ]);
+                 * Provider says the customer paid.
+                 *
+                 * PaymentService is responsible for:
+                 *
+                 * payment → successful
+                 * subscription → active
+                 * entitlements → created
+                 */
+                $paymentService->markSuccessful(
+                    $payment,
+                    $transaction['reference'] ??
+                        $reference
+                );
 
-                /*
-                * 4. Payment successful.
-                */
-                if (($transaction['status'] ?? null) === 'success') {
+                Log::info(
+                    'Paystack payment successfully completed',
+                    [
+                        'payment_id' =>
+                            $payment->id,
 
-                    $paymentService->markSuccessful(
-                        $payment,
-                        $transaction['reference'] ?? $reference
+                        'subscription_id' =>
+                            $payment->subscription_id,
+
+                        'reference' =>
+                            $reference,
+                    ]
+                );
+
+                return redirect()
+                    ->route('dashboard')
+                    ->with(
+                        'success',
+                        'Payment successful! Your Silver Spoon subscription is now active.'
                     );
+            }
 
-                    Log::info('Paystack payment successfully completed', [
-                        'payment_id' => $payment->id,
-                        'subscription_id' => $payment->subscription_id,
-                        'reference' => $reference,
-                    ]);
+            /*
+             * ---------------------------------------------------------
+             * 6. DEFINITIVE FAILURE
+             * ---------------------------------------------------------
+             *
+             * ONLY provider-confirmed failure reaches here.
+             */
+            if (
+                in_array(
+                    $status,
+                    [
+                        'failed',
+                        'abandoned',
+                        'cancelled',
+                    ],
+                    true
+                )
+            ) {
 
-                    return redirect()
-                        ->route('dashboard')
-                        ->with(
-                            'success',
-                            'Payment successful! Your Silver Spoon subscription is now active.'
-                        );
+                /*
+                 * Never downgrade a successful payment.
+                 */
+                if (
+                    $payment->status !==
+                    PaymentStatus::SUCCESSFUL
+                ) {
+                    $paymentService->markFailed(
+                        $payment
+                    );
                 }
 
                 /*
-                * 5. Payment was cancelled, abandoned,
-                *    declined, or otherwise unsuccessful.
-                *
-                * This attempt must NOT lock the user out
-                * from subscribing again.
-                */
-                $paymentService->markFailed($payment);
+                 * IMPORTANT:
+                 *
+                 * DO NOT CANCEL THE SUBSCRIPTION.
+                 *
+                 * A failed payment attempt should simply allow
+                 * another payment attempt.
+                 */
+                Log::info(
+                    'Paystack payment was not completed',
+                    [
+                        'payment_id' =>
+                            $payment->id,
 
-                if ($payment->subscription) {
-                    $payment->subscription->update([
-                        'status' => 'cancelled',
-                    ]);
-                }
+                        'subscription_id' =>
+                            $payment->subscription_id,
 
-                Log::info('Paystack payment was not completed', [
-                    'payment_id' => $payment->id,
-                    'subscription_id' => $payment->subscription_id,
-                    'reference' => $reference,
-                    'status' => $transaction['status'] ?? null,
-                ]);
+                        'reference' =>
+                            $reference,
+
+                        'status' =>
+                            $status,
+                    ]
+                );
 
                 return redirect()
                     ->route('dashboard')
@@ -247,49 +433,96 @@ class PaystackController extends Controller
                         'error',
                         'Payment was not completed. You can try subscribing again.'
                     );
-
-            } catch (Throwable $e) {
-
-                Log::error('Paystack callback processing failed', [
-                    'reference' => $reference,
-                    'error' => $e->getMessage(),
-                ]);
-
-                /*
-                * If we can identify the payment, invalidate
-                * the associated subscription attempt.
-                */
-                try {
-                    $payment = Payment::where(
-                        'transaction_reference',
-                        $reference
-                    )->first();
-
-                    if ($payment) {
-
-                        $paymentService->markFailed($payment);
-
-                        if ($payment->subscription) {
-                            $payment->subscription->update([
-                                'status' => SubscriptionStatus::CANCELLED,
-                            ]);
-                        }
-                    }
-
-                } catch (Throwable $cleanupException) {
-
-                    Log::error('Failed to clean up Paystack payment attempt', [
-                        'reference' => $reference,
-                        'error' => $cleanupException->getMessage(),
-                    ]);
-                }
-
-                return redirect()
-                    ->route('dashboard')
-                    ->with(
-                        'error',
-                        'We could not verify your payment. No subscription was activated. Please try again.'
-                    );
             }
+
+            /*
+             * ---------------------------------------------------------
+             * 7. NON-FINAL / UNKNOWN STATUS
+             * ---------------------------------------------------------
+             *
+             * Never guess.
+             */
+            Log::warning(
+                'Paystack returned a non-final transaction status',
+                [
+                    'payment_id' =>
+                        $payment->id,
+
+                    'subscription_id' =>
+                        $payment->subscription_id,
+
+                    'reference' =>
+                        $reference,
+
+                    'status' =>
+                        $status,
+
+                    'transaction' =>
+                        $transaction,
+                ]
+            );
+
+            return redirect()
+                ->route('dashboard')
+                ->with(
+                    'error',
+                    'Your payment is still being verified. Please check your subscription shortly.'
+                );
+
+        } catch (Throwable $e) {
+
+            /*
+             * ---------------------------------------------------------
+             * CRITICAL PAYMENT SAFETY RULE
+             * ---------------------------------------------------------
+             *
+             * NEVER mark the payment failed here.
+             *
+             * At this point we don't know whether:
+             *
+             * - Paystack failed
+             * - Paystack succeeded but our app failed
+             * - the network failed
+             * - entitlement generation failed
+             * - the database transaction failed
+             *
+             * Therefore we preserve the payment state.
+             */
+            Log::error(
+                'Paystack callback processing failed',
+                [
+                    'payment_id' =>
+                        $payment->id,
+
+                    'subscription_id' =>
+                        $payment->subscription_id,
+
+                    'reference' =>
+                        $reference,
+
+                    'payment_status' =>
+                        $payment->status instanceof
+                        PaymentStatus
+                            ? $payment->status->value
+                            : $payment->status,
+
+                    'error' =>
+                        $e->getMessage(),
+
+                    'exception' =>
+                        get_class($e),
+
+                    'trace' =>
+                        $e->getTraceAsString(),
+                ]
+            );
+
+            return redirect()
+                ->route('dashboard')
+                ->with(
+                    'error',
+                    'We received your payment response but could not finish processing it. If you were charged, your payment remains under verification.'
+                );
         }
+    }
 }

@@ -1,99 +1,57 @@
-<!DOCTYPE html>
-<html lang="en">
+@extends('layouts.app')
 
-<head>
+@section('title', 'Meal Service Report - Silver Spoon')
 
-    <meta charset="UTF-8">
+@section('content')
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Meal Service Report - Silver Spoon</title>
-
-    <script src="https://cdn.tailwindcss.com"></script>
-
-</head>
-
-<body class="bg-gray-100 min-h-screen">
-
-<nav class="bg-black text-white">
-
-    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    {{-- HEADER --}}
+    <div class="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
         <div>
 
-            <h1 class="font-bold text-lg">
-                Silver Spoon
-            </h1>
-
-            <p class="text-xs text-gray-400">
-                Meal Service Reports
-            </p>
-
-        </div>
-
-        <div class="text-sm">
-            {{ auth()->user()->name }}
-        </div>
-
-    </div>
-
-</nav>
-
-
-<main class="max-w-7xl mx-auto px-6 py-8">
-
-    {{-- Header --}}
-
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-
-        <div>
-
-            <h2 class="text-3xl font-bold">
+            <h2 class="text-3xl font-bold text-slate-900">
                 Meal Service Report
             </h2>
 
-            <p class="text-gray-500 mt-2">
+            <p class="mt-2 text-slate-500">
                 Track exactly who served each meal, to whom, and when.
             </p>
 
         </div>
 
-       
-        <a
-            href="{{ route('admin.meals.dashboard', request()->query()) }}"
-            class="bg-black text-white px-5 py-3 rounded-xl font-semibold text-center hover:bg-gray-800"
-        >
-            Back To Dashboard
-        </a>
+        <div class="flex flex-wrap gap-3">
 
-         <a
-            href="{{ route('admin.meals.report.export', request()->query()) }}"
-            class="bg-black text-white px-5 py-3 rounded-xl font-semibold text-center hover:bg-gray-800"
-        >
-            Export CSV
-        </a>
+            <a
+                href="{{ route('admin.meals.dashboard', request()->query()) }}"
+                class="rounded-xl bg-slate-900 px-5 py-3 text-center font-semibold text-white hover:bg-slate-800"
+            >
+                Back To Dashboard
+            </a>
 
+            <a
+                href="{{ route('admin.meals.report.export', request()->query()) }}"
+                class="rounded-xl bg-slate-900 px-5 py-3 text-center font-semibold text-white hover:bg-slate-800"
+            >
+                Export CSV
+            </a>
 
+        </div>
 
     </div>
 
 
-    {{-- Filters --}}
-
-    <div class="bg-white border rounded-2xl p-6 mb-8">
+    {{-- FILTERS --}}
+    <div class="mb-8 rounded-2xl border border-slate-200 bg-white p-6">
 
         <form
             method="GET"
             action="{{ route('admin.meals.report') }}"
-            class="grid grid-cols-1 md:grid-cols-4 gap-4"
+            class="grid grid-cols-1 gap-4 md:grid-cols-4"
         >
 
             <div>
 
-                <label class="block text-sm font-semibold mb-2">
+                <label class="mb-2 block text-sm font-semibold">
                     Date
                 </label>
 
@@ -101,7 +59,7 @@
                     type="date"
                     name="date"
                     value="{{ $date }}"
-                    class="w-full border rounded-xl px-4 py-3"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
                 >
 
             </div>
@@ -109,13 +67,13 @@
 
             <div>
 
-                <label class="block text-sm font-semibold mb-2">
+                <label class="mb-2 block text-sm font-semibold">
                     Staff Member
                 </label>
 
                 <select
                     name="staff_id"
-                    class="w-full border rounded-xl px-4 py-3"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
                 >
 
                     <option value="">
@@ -141,7 +99,7 @@
 
             <div>
 
-                <label class="block text-sm font-semibold mb-2">
+                <label class="mb-2 block text-sm font-semibold">
                     Customer
                 </label>
 
@@ -150,7 +108,7 @@
                     name="customer"
                     value="{{ $customer }}"
                     placeholder="Name or email"
-                    class="w-full border rounded-xl px-4 py-3"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
                 >
 
             </div>
@@ -160,7 +118,7 @@
 
                 <button
                     type="submit"
-                    class="w-full bg-black text-white px-5 py-3 rounded-xl font-semibold hover:bg-gray-800"
+                    class="w-full rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800"
                 >
                     Apply Filters
                 </button>
@@ -172,56 +130,55 @@
     </div>
 
 
-    {{-- Summary --}}
+    {{-- SUMMARY --}}
+    <div class="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
 
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="rounded-2xl border border-slate-200 bg-white p-5">
 
-        <div class="bg-white border rounded-2xl p-5">
-
-            <p class="text-sm text-gray-500">
+            <p class="text-sm text-slate-500">
                 Total Served
             </p>
 
-            <p class="text-3xl font-bold mt-2">
+            <p class="mt-2 text-3xl font-bold">
                 {{ $totalServed }}
             </p>
 
         </div>
 
 
-        <div class="bg-white border rounded-2xl p-5">
+        <div class="rounded-2xl border border-slate-200 bg-white p-5">
 
-            <p class="text-sm text-gray-500">
+            <p class="text-sm text-slate-500">
                 Breakfast
             </p>
 
-            <p class="text-3xl font-bold mt-2">
+            <p class="mt-2 text-3xl font-bold">
                 {{ $breakfast }}
             </p>
 
         </div>
 
 
-        <div class="bg-white border rounded-2xl p-5">
+        <div class="rounded-2xl border border-slate-200 bg-white p-5">
 
-            <p class="text-sm text-gray-500">
+            <p class="text-sm text-slate-500">
                 Lunch
             </p>
 
-            <p class="text-3xl font-bold mt-2">
+            <p class="mt-2 text-3xl font-bold">
                 {{ $lunch }}
             </p>
 
         </div>
 
 
-        <div class="bg-white border rounded-2xl p-5">
+        <div class="rounded-2xl border border-slate-200 bg-white p-5">
 
-            <p class="text-sm text-gray-500">
+            <p class="text-sm text-slate-500">
                 Supper
             </p>
 
-            <p class="text-3xl font-bold mt-2">
+            <p class="mt-2 text-3xl font-bold">
                 {{ $supper }}
             </p>
 
@@ -230,30 +187,25 @@
     </div>
 
 
-    {{-- Staff performance --}}
+    {{-- STAFF PERFORMANCE --}}
+    <div class="mb-8 rounded-2xl border border-slate-200 bg-white p-6">
 
-    <div class="bg-white border rounded-2xl p-6 mb-8">
+        <div class="mb-5">
 
-        <div class="flex items-center justify-between mb-5">
+            <h3 class="text-xl font-bold">
+                Staff Performance
+            </h3>
 
-            <div>
-
-                <h3 class="text-xl font-bold">
-                    Staff Performance
-                </h3>
-
-                <p class="text-sm text-gray-500">
-                    Meals served by each staff member.
-                </p>
-
-            </div>
+            <p class="text-sm text-slate-500">
+                Meals served by each staff member.
+            </p>
 
         </div>
 
 
         @if($staffSummary->isEmpty())
 
-            <div class="text-gray-500 py-6 text-center">
+            <div class="py-6 text-center text-slate-500">
                 No meals were served on this date.
             </div>
 
@@ -263,7 +215,7 @@
 
                 @foreach($staffSummary as $member)
 
-                    <div class="flex items-center justify-between border rounded-xl p-4">
+                    <div class="flex items-center justify-between rounded-xl border border-slate-200 p-4">
 
                         <div>
 
@@ -271,7 +223,7 @@
                                 {{ $member->staff_name }}
                             </p>
 
-                            <p class="text-sm text-gray-500">
+                            <p class="text-sm text-slate-500">
                                 {{ $member->meals_served }}
                                 {{ $member->meals_served == 1 ? 'meal' : 'meals' }}
                             </p>
@@ -293,30 +245,29 @@
     </div>
 
 
-    {{-- Meal breakdown --}}
-
-    <div class="bg-white border rounded-2xl p-6 mb-8">
+    {{-- MEAL BREAKDOWN --}}
+    <div class="mb-8 rounded-2xl border border-slate-200 bg-white p-6">
 
         <h3 class="text-xl font-bold">
             Meal Breakdown
         </h3>
 
-        <p class="text-sm text-gray-500 mb-5">
+        <p class="mb-5 text-sm text-slate-500">
             Distribution of meals served.
         </p>
 
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
 
             @foreach($mealSummary as $meal)
 
-                <div class="border rounded-xl p-5">
+                <div class="rounded-xl border border-slate-200 p-5">
 
-                    <p class="text-sm text-gray-500">
+                    <p class="text-sm text-slate-500">
                         {{ ucfirst($meal->meal_type) }}
                     </p>
 
-                    <p class="text-3xl font-bold mt-2">
+                    <p class="mt-2 text-3xl font-bold">
                         {{ $meal->meals_served }}
                     </p>
 
@@ -329,17 +280,16 @@
     </div>
 
 
-    {{-- Redemption history --}}
+    {{-- REDEMPTION HISTORY --}}
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
 
-    <div class="bg-white border rounded-2xl overflow-hidden">
-
-        <div class="p-6 border-b">
+        <div class="border-b border-slate-200 p-6">
 
             <h3 class="text-xl font-bold">
                 Service History
             </h3>
 
-            <p class="text-sm text-gray-500 mt-1">
+            <p class="mt-1 text-sm text-slate-500">
                 Every meal redemption recorded for
                 {{ \Carbon\Carbon::parse($date)->format('d M Y') }}.
             </p>
@@ -349,7 +299,7 @@
 
         @if($redemptions->isEmpty())
 
-            <div class="p-10 text-center text-gray-500">
+            <div class="p-10 text-center text-slate-500">
                 No meal service records found.
             </div>
 
@@ -359,31 +309,31 @@
 
                 <table class="w-full text-sm">
 
-                    <thead class="bg-gray-50">
+                    <thead class="bg-slate-50">
 
                         <tr>
 
-                            <th class="text-left px-6 py-4">
+                            <th class="px-6 py-4 text-left">
                                 Time
                             </th>
 
-                            <th class="text-left px-6 py-4">
+                            <th class="px-6 py-4 text-left">
                                 Customer
                             </th>
 
-                            <th class="text-left px-6 py-4">
+                            <th class="px-6 py-4 text-left">
                                 Meal
                             </th>
 
-                            <th class="text-left px-6 py-4">
+                            <th class="px-6 py-4 text-left">
                                 Type
                             </th>
 
-                            <th class="text-left px-6 py-4">
+                            <th class="px-6 py-4 text-left">
                                 Served By
                             </th>
 
-                            <th class="text-left px-6 py-4">
+                            <th class="px-6 py-4 text-left">
                                 Reference
                             </th>
 
@@ -396,9 +346,9 @@
 
                         @foreach($redemptions as $redemption)
 
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-slate-50">
 
-                                <td class="px-6 py-4 whitespace-nowrap">
+                                <td class="whitespace-nowrap px-6 py-4">
 
                                     <span class="font-semibold">
                                         {{ \Carbon\Carbon::parse($redemption->redeemed_at)->format('H:i:s') }}
@@ -415,7 +365,7 @@
 
                                     @if($redemption->customer_email)
 
-                                        <p class="text-gray-500 text-xs">
+                                        <p class="text-xs text-slate-500">
                                             {{ $redemption->customer_email }}
                                         </p>
 
@@ -425,18 +375,14 @@
 
 
                                 <td class="px-6 py-4 font-medium">
-
                                     {{ $redemption->meal_name }}
-
                                 </td>
 
 
                                 <td class="px-6 py-4">
 
-                                    <span class="inline-flex px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold">
-
+                                    <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                                         {{ ucfirst($redemption->meal_type) }}
-
                                     </span>
 
                                 </td>
@@ -452,7 +398,7 @@
 
                                     @else
 
-                                        <span class="text-gray-400">
+                                        <span class="text-slate-400">
                                             Customer
                                         </span>
 
@@ -463,10 +409,8 @@
 
                                 <td class="px-6 py-4">
 
-                                    <code class="text-xs bg-gray-100 px-2 py-1 rounded">
-
+                                    <code class="rounded bg-slate-100 px-2 py-1 text-xs">
                                         {{ $redemption->reference }}
-
                                     </code>
 
                                 </td>
@@ -482,17 +426,12 @@
             </div>
 
 
-            <div class="p-6 border-t">
-
+            <div class="border-t border-slate-200 p-6">
                 {{ $redemptions->links() }}
-
             </div>
 
         @endif
 
     </div>
 
-</main>
-
-</body>
-</html>
+@endsection

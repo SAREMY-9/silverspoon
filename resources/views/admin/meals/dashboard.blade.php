@@ -1,159 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
+@extends('layouts.app')
 
-<head>
+@section('title', 'Meal Operations Dashboard - Silver Spoon')
 
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Meal Operations Dashboard - Silver Spoon</title>
-
-    <script src="https://cdn.tailwindcss.com"></script>
-
-</head>
-
-
-<body class="bg-gray-100 min-h-screen">
-
-
-<nav class="bg-black text-white">
-
-    <div class="max-w-7xl mx-auto px-6 py-4">
-
-        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-
-            {{-- BRAND --}}
-
-            <div>
-
-                <a href="{{ route('admin.meals.dashboard') }}"
-                   class="block">
-
-                    <h1 class="font-bold text-lg">
-                        Silver Spoon
-                    </h1>
-
-                    <p class="text-xs text-gray-400">
-                        Meal Operations
-                    </p>
-
-                </a>
-
-            </div>
-
-
-            {{-- NAVIGATION --}}
-
-            <div class="flex flex-wrap items-center gap-2 text-sm">
-
-                {{-- Operations Dashboard --}}
-
-                <a
-                    href="{{ route('admin.meals.dashboard') }}"
-                    class="px-3 py-2 rounded-lg
-                           bg-white/10 text-white
-                           hover:bg-white/20"
-                >
-                    Dashboard
-                </a>
-
-
-                {{-- Meal Plans --}}
-
-                <a
-                    href="{{ route('admin.meal-plans.index') }}"
-                    class="px-3 py-2 rounded-lg
-                           text-gray-300 hover:text-white
-                           hover:bg-white/10"
-                >
-                    Meal Plans
-                </a>
-
-
-                {{-- Meals --}}
-
-                <a
-                    href="{{ route('admin.meals.index') }}"
-                    class="px-3 py-2 rounded-lg
-                           text-gray-300 hover:text-white
-                           hover:bg-white/10"
-                >
-                    Meals
-                </a>
-
-
-                {{-- Reports --}}
-
-                <a
-                    href="{{ route('admin.meals.report') }}"
-                    class="px-3 py-2 rounded-lg
-                           text-gray-300 hover:text-white
-                           hover:bg-white/10"
-                >
-                    Reports
-                </a>
-
-
-                {{-- Scanner --}}
-
-                <a
-                    href="{{ route('staff.meals.scan') }}"
-                    class="px-3 py-2 rounded-lg
-                           text-gray-300 hover:text-white
-                           hover:bg-white/10"
-                >
-                    Scanner
-                </a>
-
-
-                {{-- USER --}}
-
-                <div class="ml-2 pl-3 border-l border-gray-700">
-
-                    <span class="text-gray-300">
-                        {{ auth()->user()->name }}
-                    </span>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</nav>
-
-<main class="max-w-7xl mx-auto px-6 py-8">
-
+@section('content')
 
     {{-- HEADER --}}
-
     <div class="mb-8">
 
-        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
 
             <div>
 
-                <h2 class="text-3xl font-bold">
+                <h2 class="text-3xl font-bold text-slate-900">
                     Meal Operations
                 </h2>
 
-                <p class="text-gray-500 mt-2">
+                <p class="mt-2 text-slate-500">
                     Live overview of today's meal service.
                 </p>
 
             </div>
 
-
-            <div class="text-sm text-gray-500">
-
+            <div class="text-sm text-slate-500">
                 {{ \Carbon\Carbon::parse($today)->format('l, d F Y') }}
-
             </div>
 
         </div>
@@ -161,134 +30,108 @@
     </div>
 
 
-
     {{-- TOP STATISTICS --}}
+    <div class="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-5">
 
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div class="rounded-2xl border border-slate-200 bg-white p-5">
+            <p class="text-sm text-slate-500">Expected</p>
 
-
-        <div class="bg-white border rounded-2xl p-5">
-
-            <p class="text-sm text-gray-500">
-                Expected
-            </p>
-
-            <p class="text-3xl font-bold mt-2">
+            <p class="mt-2 text-3xl font-bold">
                 {{ $totalExpected }}
             </p>
 
-            <p class="text-xs text-gray-400 mt-1">
+            <p class="mt-1 text-xs text-slate-400">
                 meals today
             </p>
-
         </div>
 
 
-        <div class="bg-white border rounded-2xl p-5">
+        <div class="rounded-2xl border border-slate-200 bg-white p-5">
+            <p class="text-sm text-slate-500">Served</p>
 
-            <p class="text-sm text-gray-500">
-                Served
-            </p>
-
-            <p class="text-3xl font-bold mt-2 text-green-600">
+            <p class="mt-2 text-3xl font-bold text-green-600">
                 {{ $totalServed }}
             </p>
 
-            <p class="text-xs text-gray-400 mt-1">
+            <p class="mt-1 text-xs text-slate-400">
                 meals completed
             </p>
-
         </div>
 
 
-        <div class="bg-white border rounded-2xl p-5">
+        <div class="rounded-2xl border border-slate-200 bg-white p-5">
+            <p class="text-sm text-slate-500">Remaining</p>
 
-            <p class="text-sm text-gray-500">
-                Remaining
-            </p>
-
-            <p class="text-3xl font-bold mt-2">
+            <p class="mt-2 text-3xl font-bold">
                 {{ $totalRemaining }}
             </p>
 
-            <p class="text-xs text-gray-400 mt-1">
+            <p class="mt-1 text-xs text-slate-400">
                 still available
             </p>
-
         </div>
 
 
-        <div class="bg-white border rounded-2xl p-5">
+        <div class="rounded-2xl border border-slate-200 bg-white p-5">
+            <p class="text-sm text-slate-500">Expired</p>
 
-            <p class="text-sm text-gray-500">
-                Expired
-            </p>
-
-            <p class="text-3xl font-bold mt-2 text-red-600">
+            <p class="mt-2 text-3xl font-bold text-red-600">
                 {{ $totalExpired }}
             </p>
 
-            <p class="text-xs text-gray-400 mt-1">
+            <p class="mt-1 text-xs text-slate-400">
                 expired entitlements
             </p>
-
         </div>
 
 
-        <div class="bg-white border rounded-2xl p-5">
+        <div class="rounded-2xl border border-slate-200 bg-white p-5">
+            <p class="text-sm text-slate-500">Active Plans</p>
 
-            <p class="text-sm text-gray-500">
-                Active Plans
-            </p>
-
-            <p class="text-3xl font-bold mt-2">
+            <p class="mt-2 text-3xl font-bold">
                 {{ $activeSubscriptions }}
             </p>
 
-            <p class="text-xs text-gray-400 mt-1">
+            <p class="mt-1 text-xs text-slate-400">
                 active subscriptions
             </p>
-
         </div>
 
     </div>
 
 
-
     {{-- MEAL PERIODS --}}
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-
+    <div class="mb-8 grid grid-cols-1 gap-5 md:grid-cols-3">
 
         @foreach(['breakfast', 'lunch', 'supper'] as $type)
 
             @php
                 $stats = $mealStats[$type];
+
+                $percentage = $stats['expected'] > 0
+                    ? round(($stats['served'] / $stats['expected']) * 100)
+                    : 0;
             @endphp
 
-
-            <div class="bg-white border rounded-2xl p-6">
+            <div class="rounded-2xl border border-slate-200 bg-white p-6">
 
                 <div class="flex items-center justify-between">
 
                     <div>
-
-                        <p class="text-xs uppercase tracking-wide text-gray-500 font-semibold">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
                             {{ $type }}
                         </p>
 
-                        <h3 class="text-2xl font-bold mt-1">
+                        <h3 class="mt-1 text-2xl font-bold">
                             {{ $stats['served'] }}
                             /
                             {{ $stats['expected'] }}
                         </h3>
-
                     </div>
-
 
                     <div class="text-right">
 
-                        <p class="text-sm text-gray-500">
+                        <p class="text-sm text-slate-500">
                             Remaining
                         </p>
 
@@ -301,32 +144,20 @@
                 </div>
 
 
-                @php
-                    $percentage = $stats['expected'] > 0
-                        ? round(($stats['served'] / $stats['expected']) * 100)
-                        : 0;
-                @endphp
-
-
                 <div class="mt-5">
 
-                    <div class="flex justify-between text-xs text-gray-500 mb-2">
+                    <div class="mb-2 flex justify-between text-xs text-slate-500">
 
-                        <span>
-                            Service progress
-                        </span>
+                        <span>Service progress</span>
 
-                        <span>
-                            {{ $percentage }}%
-                        </span>
+                        <span>{{ $percentage }}%</span>
 
                     </div>
 
-
-                    <div class="w-full bg-gray-100 rounded-full h-3">
+                    <div class="h-3 w-full rounded-full bg-slate-100">
 
                         <div
-                            class="bg-black h-3 rounded-full"
+                            class="h-3 rounded-full bg-slate-900"
                             style="width: {{ $percentage }}%"
                         ></div>
 
@@ -337,9 +168,8 @@
 
                 @if($stats['expired'] > 0)
 
-                    <p class="text-xs text-red-600 mt-4">
-                        {{ $stats['expired'] }}
-                        expired
+                    <p class="mt-4 text-xs text-red-600">
+                        {{ $stats['expired'] }} expired
                     </p>
 
                 @endif
@@ -351,46 +181,40 @@
     </div>
 
 
-
     {{-- SERVICE SPLIT --}}
+    <div class="mb-8 grid grid-cols-1 gap-5 md:grid-cols-2">
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
-
-
-        <div class="bg-white border rounded-2xl p-6">
+        <div class="rounded-2xl border border-slate-200 bg-white p-6">
 
             <h3 class="text-xl font-bold">
                 Today's Service
             </h3>
 
-            <p class="text-sm text-gray-500 mt-1">
+            <p class="mt-1 text-sm text-slate-500">
                 How today's meals are being redeemed.
             </p>
 
+            <div class="mt-6 grid grid-cols-2 gap-4">
 
-            <div class="grid grid-cols-2 gap-4 mt-6">
+                <div class="rounded-xl border border-slate-200 p-5">
 
-
-                <div class="border rounded-xl p-5">
-
-                    <p class="text-sm text-gray-500">
+                    <p class="text-sm text-slate-500">
                         Staff Served
                     </p>
 
-                    <p class="text-3xl font-bold mt-2">
+                    <p class="mt-2 text-3xl font-bold">
                         {{ $staffServed }}
                     </p>
 
                 </div>
 
+                <div class="rounded-xl border border-slate-200 p-5">
 
-                <div class="border rounded-xl p-5">
-
-                    <p class="text-sm text-gray-500">
+                    <p class="text-sm text-slate-500">
                         Customer Redeemed
                     </p>
 
-                    <p class="text-3xl font-bold mt-2">
+                    <p class="mt-2 text-3xl font-bold">
                         {{ $customerSelfRedeemed }}
                     </p>
 
@@ -401,19 +225,17 @@
         </div>
 
 
-
-        <div class="bg-white border rounded-2xl p-6">
+        <div class="rounded-2xl border border-slate-200 bg-white p-6">
 
             <h3 class="text-xl font-bold">
                 Service by Meal
             </h3>
 
-            <p class="text-sm text-gray-500 mt-1">
+            <p class="mt-1 text-sm text-slate-500">
                 Meals completed today.
             </p>
 
-
-            <div class="space-y-3 mt-6">
+            <div class="mt-6 space-y-3">
 
                 @foreach(['breakfast', 'lunch', 'supper'] as $type)
 
@@ -422,8 +244,7 @@
                             ->get($type)?->total ?? 0;
                     @endphp
 
-
-                    <div class="flex items-center justify-between border rounded-xl p-4">
+                    <div class="flex items-center justify-between rounded-xl border border-slate-200 p-4">
 
                         <span class="font-semibold">
                             {{ ucfirst($type) }}
@@ -444,10 +265,8 @@
     </div>
 
 
-
     {{-- STAFF PERFORMANCE --}}
-
-    <div class="bg-white border rounded-2xl p-6 mb-8">
+    <div class="mb-8 rounded-2xl border border-slate-200 bg-white p-6">
 
         <div class="mb-5">
 
@@ -455,7 +274,7 @@
                 Staff Activity
             </h3>
 
-            <p class="text-sm text-gray-500 mt-1">
+            <p class="mt-1 text-sm text-slate-500">
                 Staff members who have served meals today.
             </p>
 
@@ -464,7 +283,7 @@
 
         @if($staffPerformance->isEmpty())
 
-            <div class="text-center text-gray-500 py-8">
+            <div class="py-8 text-center text-slate-500">
                 No staff service activity yet today.
             </div>
 
@@ -474,30 +293,29 @@
 
                 <table class="w-full text-sm">
 
-                    <thead class="bg-gray-50">
+                    <thead class="bg-slate-50">
 
                         <tr>
 
-                            <th class="text-left px-5 py-4">
+                            <th class="px-5 py-4 text-left">
                                 Staff
                             </th>
 
-                            <th class="text-left px-5 py-4">
+                            <th class="px-5 py-4 text-left">
                                 Meals Served
                             </th>
 
-                            <th class="text-left px-5 py-4">
+                            <th class="px-5 py-4 text-left">
                                 First Service
                             </th>
 
-                            <th class="text-left px-5 py-4">
+                            <th class="px-5 py-4 text-left">
                                 Last Service
                             </th>
 
                         </tr>
 
                     </thead>
-
 
                     <tbody class="divide-y">
 
@@ -511,24 +329,18 @@
 
                                 <td class="px-5 py-4">
 
-                                    <span class="inline-flex px-3 py-1 rounded-full bg-gray-100 font-semibold">
-
+                                    <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 font-semibold">
                                         {{ $member->meals_served }}
-
                                     </span>
 
                                 </td>
 
                                 <td class="px-5 py-4">
-
                                     {{ \Carbon\Carbon::parse($member->first_service)->format('H:i:s') }}
-
                                 </td>
 
                                 <td class="px-5 py-4">
-
                                     {{ \Carbon\Carbon::parse($member->last_service)->format('H:i:s') }}
-
                                 </td>
 
                             </tr>
@@ -546,18 +358,16 @@
     </div>
 
 
-
     {{-- LATEST SERVICE --}}
+    <div class="mb-8 overflow-hidden rounded-2xl border border-slate-200 bg-white">
 
-    <div class="bg-white border rounded-2xl overflow-hidden mb-8">
-
-        <div class="p-6 border-b">
+        <div class="border-b border-slate-200 p-6">
 
             <h3 class="text-xl font-bold">
                 Latest Service Activity
             </h3>
 
-            <p class="text-sm text-gray-500 mt-1">
+            <p class="mt-1 text-sm text-slate-500">
                 The most recent meals served today.
             </p>
 
@@ -566,10 +376,8 @@
 
         @if($latestRedemptions->isEmpty())
 
-            <div class="p-10 text-center text-gray-500">
-
+            <div class="p-10 text-center text-slate-500">
                 No meals have been served yet today.
-
             </div>
 
         @else
@@ -578,90 +386,55 @@
 
                 <table class="w-full text-sm">
 
-                    <thead class="bg-gray-50">
+                    <thead class="bg-slate-50">
 
                         <tr>
 
-                            <th class="text-left px-6 py-4">
-                                Time
-                            </th>
-
-                            <th class="text-left px-6 py-4">
-                                Customer
-                            </th>
-
-                            <th class="text-left px-6 py-4">
-                                Meal
-                            </th>
-
-                            <th class="text-left px-6 py-4">
-                                Type
-                            </th>
-
-                            <th class="text-left px-6 py-4">
-                                Served By
-                            </th>
-
-                            <th class="text-left px-6 py-4">
-                                Reference
-                            </th>
+                            <th class="px-6 py-4 text-left">Time</th>
+                            <th class="px-6 py-4 text-left">Customer</th>
+                            <th class="px-6 py-4 text-left">Meal</th>
+                            <th class="px-6 py-4 text-left">Type</th>
+                            <th class="px-6 py-4 text-left">Served By</th>
+                            <th class="px-6 py-4 text-left">Reference</th>
 
                         </tr>
 
                     </thead>
 
-
                     <tbody class="divide-y">
 
                         @foreach($latestRedemptions as $redemption)
 
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-slate-50">
 
-                                <td class="px-6 py-4 whitespace-nowrap font-semibold">
-
+                                <td class="whitespace-nowrap px-6 py-4 font-semibold">
                                     {{ \Carbon\Carbon::parse($redemption->redeemed_at)->format('H:i:s') }}
-
                                 </td>
-
 
                                 <td class="px-6 py-4 font-semibold">
-
                                     {{ $redemption->customer_name }}
-
                                 </td>
 
-
                                 <td class="px-6 py-4">
-
                                     {{ $redemption->meal_name }}
-
                                 </td>
-
 
                                 <td class="px-6 py-4">
 
-                                    <span class="inline-flex px-3 py-1 rounded-full bg-gray-100 text-xs font-semibold">
-
+                                    <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold">
                                         {{ ucfirst($redemption->meal_type) }}
-
                                     </span>
 
                                 </td>
 
-
                                 <td class="px-6 py-4">
-
                                     {{ $redemption->staff_name ?? 'Customer' }}
-
                                 </td>
 
-
                                 <td class="px-6 py-4">
 
-                                    <code class="text-xs bg-gray-100 px-2 py-1 rounded">
-
+                                    <code class="rounded bg-slate-100 px-2 py-1 text-xs">
                                         {{ $redemption->reference }}
-
                                     </code>
 
                                 </td>
@@ -681,10 +454,8 @@
     </div>
 
 
-
     {{-- EXCEPTIONS --}}
-
-    <div class="bg-white border rounded-2xl p-6 mb-8">
+    <div class="mb-8 rounded-2xl border border-slate-200 bg-white p-6">
 
         <div class="mb-5">
 
@@ -692,7 +463,7 @@
                 Exceptions
             </h3>
 
-            <p class="text-sm text-gray-500 mt-1">
+            <p class="mt-1 text-sm text-slate-500">
                 Customers who may require attention today.
             </p>
 
@@ -701,10 +472,8 @@
 
         @if($customersWithoutEntitlements->isEmpty())
 
-            <div class="bg-green-50 border border-green-200 rounded-xl p-5 text-green-700">
-
+            <div class="rounded-xl border border-green-200 bg-green-50 p-5 text-green-700">
                 All active subscriptions currently have meal entitlements scheduled for today.
-
             </div>
 
         @else
@@ -713,32 +482,25 @@
 
                 @foreach($customersWithoutEntitlements as $subscription)
 
-                    <div class="border border-red-200 bg-red-50 rounded-xl p-5">
+                    <div class="rounded-xl border border-red-200 bg-red-50 p-5">
 
-                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
                             <div>
 
                                 <p class="font-bold text-red-800">
-
                                     {{ $subscription->user->name }}
-
                                 </p>
 
-                                <p class="text-sm text-red-700 mt-1">
-
+                                <p class="mt-1 text-sm text-red-700">
                                     Active subscription:
                                     {{ $subscription->mealPlan->name ?? 'Unknown plan' }}
-
                                 </p>
 
                             </div>
 
-
-                            <span class="inline-flex px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
-
+                            <span class="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
                                 No entitlement today
-
                             </span>
 
                         </div>
@@ -754,201 +516,177 @@
     </div>
 
 
+    {{-- QUICK ACTIONS --}}
+    <div class="mb-8">
 
-{{-- QUICK LINKS --}}
-
-<div class="mb-8">
-
-    <div class="mb-5">
-
-        <h3 class="text-xl font-bold">
-            Quick Actions
-        </h3>
-
-        <p class="text-sm text-gray-500 mt-1">
-            Manage menus, meals and today's operations.
-        </p>
-
-    </div>
-
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
-
-        {{-- Meal Plans --}}
-
-        <a
-            href="{{ route('admin.meal-plans.index') }}"
-            class="group bg-white border rounded-2xl p-5
-                   hover:border-black hover:shadow-sm transition"
-        >
-
-            <div class="flex items-center justify-between">
-
-                <div class="text-2xl">
-                    📋
-                </div>
-
-                <span class="text-gray-400 group-hover:text-black">
-                    →
-                </span>
-
-            </div>
-
-            <h4 class="font-bold mt-4">
-                Create Meal
-            </h4>
-
-            <p class="text-sm text-gray-500 mt-1">
-                Create and manage subscription plans.
-            </p>
-
-        </a>
-
-
-        {{-- Meals --}}
-
-        <a
-            href="{{ route('admin.meals.index') }}"
-            class="group bg-white border rounded-2xl p-5
-                   hover:border-black hover:shadow-sm transition"
-        >
-
-            <div class="flex items-center justify-between">
-
-                <div class="text-2xl">
-                    🍽️
-                </div>
-
-                <span class="text-gray-400 group-hover:text-black">
-                    →
-                </span>
-
-            </div>
-
-            <h4 class="font-bold mt-4">
-                Manage Meals
-            </h4>
-
-            <p class="text-sm text-gray-500 mt-1">
-                Add, edit, activate or remove meals.
-            </p>
-
-        </a>
-
-
-        {{-- Add Meal --}}
-
-        <a
-            href="{{ route('admin.meals.create') }}"
-            class="group bg-white border rounded-2xl p-5
-                   hover:border-black hover:shadow-sm transition"
-        >
-
-            <div class="flex items-center justify-between">
-
-                <div class="text-2xl">
-                    ➕
-                </div>
-
-                <span class="text-gray-400 group-hover:text-black">
-                    →
-                </span>
-
-            </div>
-
-            <h4 class="font-bold mt-4">
-                Add Meal
-            </h4>
-
-            <p class="text-sm text-gray-500 mt-1">
-                Create a meal for a meal plan.
-            </p>
-
-        </a>
-
-
-        {{-- Scanner --}}
-
-        <a
-            href="{{ route('staff.meals.scan') }}"
-            class="group bg-black text-white rounded-2xl p-5
-                   hover:bg-gray-800 transition"
-        >
-
-            <div class="flex items-center justify-between">
-
-                <div class="text-2xl">
-                    📱
-                </div>
-
-                <span class="text-gray-400 group-hover:text-white">
-                    →
-                </span>
-
-            </div>
-
-            <h4 class="font-bold mt-4">
-                Meal Scanner
-            </h4>
-
-            <p class="text-sm text-gray-400 mt-1">
-                Scan customer QR codes and serve meals.
-            </p>
-
-        </a>
-
-    </div>
-
-</div>
-
-
-{{-- REPORTING --}}
-
-<div class="bg-white border rounded-2xl p-6 mb-8">
-
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-
-        <div>
+        <div class="mb-5">
 
             <h3 class="text-xl font-bold">
-                Reporting & Analytics
+                Quick Actions
             </h3>
 
-            <p class="text-sm text-gray-500 mt-1">
-                Review historical meal service and export operational data.
+            <p class="mt-1 text-sm text-slate-500">
+                Manage menus, meals and today's operations.
             </p>
 
         </div>
 
 
-        <div class="flex flex-wrap gap-3">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 
             <a
-                href="{{ route('admin.meals.report') }}"
-                class="px-5 py-3 rounded-xl bg-black text-white
-                       font-semibold text-sm hover:bg-gray-800"
+                href="{{ route('admin.meal-plans.index') }}"
+                class="group rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-slate-900 hover:shadow-sm"
             >
-                Service History
+
+                <div class="flex items-center justify-between">
+
+                    <div class="text-2xl">
+                        📋
+                    </div>
+
+                    <span class="text-slate-400 group-hover:text-slate-900">
+                        →
+                    </span>
+
+                </div>
+
+                <h4 class="mt-4 font-bold">
+                    Meal Plans
+                </h4>
+
+                <p class="mt-1 text-sm text-slate-500">
+                    Create and manage subscription plans.
+                </p>
+
             </a>
 
 
             <a
-                href="{{ route('admin.meals.report.export') }}"
-                class="px-5 py-3 rounded-xl border border-gray-300
-                       bg-white font-semibold text-sm hover:bg-gray-50"
+                href="{{ route('admin.meals.index') }}"
+                class="group rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-slate-900 hover:shadow-sm"
             >
-                Export CSV
+
+                <div class="flex items-center justify-between">
+
+                    <div class="text-2xl">
+                        🍽️
+                    </div>
+
+                    <span class="text-slate-400 group-hover:text-slate-900">
+                        →
+                    </span>
+
+                </div>
+
+                <h4 class="mt-4 font-bold">
+                    Manage Meals
+                </h4>
+
+                <p class="mt-1 text-sm text-slate-500">
+                    Add, edit, activate or remove meals.
+                </p>
+
+            </a>
+
+
+            <a
+                href="{{ route('admin.meals.create') }}"
+                class="group rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-slate-900 hover:shadow-sm"
+            >
+
+                <div class="flex items-center justify-between">
+
+                    <div class="text-2xl">
+                        ➕
+                    </div>
+
+                    <span class="text-slate-400 group-hover:text-slate-900">
+                        →
+                    </span>
+
+                </div>
+
+                <h4 class="mt-4 font-bold">
+                    Add Meal
+                </h4>
+
+                <p class="mt-1 text-sm text-slate-500">
+                    Create a meal for a meal plan.
+                </p>
+
+            </a>
+
+
+            <a
+                href="{{ route('staff.meals.scan') }}"
+                class="group rounded-2xl bg-slate-900 p-5 text-white transition hover:bg-slate-800"
+            >
+
+                <div class="flex items-center justify-between">
+
+                    <div class="text-2xl">
+                        📱
+                    </div>
+
+                    <span class="text-slate-400 group-hover:text-white">
+                        →
+                    </span>
+
+                </div>
+
+                <h4 class="mt-4 font-bold">
+                    Meal Scanner
+                </h4>
+
+                <p class="mt-1 text-sm text-slate-400">
+                    Scan customer QR codes and serve meals.
+                </p>
+
             </a>
 
         </div>
 
     </div>
 
-</div>
 
+    {{-- REPORTING --}}
+    <div class="mb-8 rounded-2xl border border-slate-200 bg-white p-6">
 
-</main>
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
-</body>
-</html>
+            <div>
+
+                <h3 class="text-xl font-bold">
+                    Reporting & Analytics
+                </h3>
+
+                <p class="mt-1 text-sm text-slate-500">
+                    Review historical meal service and export operational data.
+                </p>
+
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+
+                <a
+                    href="{{ route('admin.meals.report') }}"
+                    class="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                    Service History
+                </a>
+
+                <a
+                    href="{{ route('admin.meals.report.export') }}"
+                    class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold hover:bg-slate-50"
+                >
+                    Export CSV
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+@endsection

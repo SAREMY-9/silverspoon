@@ -35,18 +35,20 @@ class User extends Authenticatable
         ];
     }
 
-    public function subscriptions()
+    public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class);
     }
 
-    public function mealRedemptions()
+
+    public function mealRedemptions(): HasMany
     {
         return $this->hasMany(MealRedemption::class);
     }
 
-    public function payments()
+    public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
     }
+    
 }

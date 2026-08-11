@@ -13,7 +13,10 @@ use RuntimeException;
 class PaymentService
 {
     /**
-     * Create a pending payment for a subscription.
+     * Create a pending payment for a pending subscription.
+     *
+     * There should only be one live pending payment attempt
+     * for a subscription at a time.
      */
     public function createPayment(
         Subscription $subscription,
@@ -25,11 +28,31 @@ class PaymentService
             );
         }
 
-        if ($subscription->payments()
-            ->where('status', PaymentStatus::SUCCESSFUL)
-            ->exists()) {
+        /*
+         * Never create another payment if this subscription
+         * already has a successful payment.
+         */
+        if (
+            $subscription->payments()
+                ->where('status', PaymentStatus::SUCCESSFUL)
+                ->exists()
+        ) {
             throw new RuntimeException(
                 'This subscription has already been paid for.'
+            );
+        }
+
+        /*
+         * There must never be two simultaneous pending
+         * payment attempts for the same subscription.
+         */
+        if (
+            $subscription->payments()
+                ->where('status', PaymentStatus::PENDING)
+                ->exists()
+        ) {
+            throw new RuntimeException(
+                'This subscription already has a payment in progress.'
             );
         }
 
@@ -45,7 +68,11 @@ class PaymentService
     }
 
     /**
-     * Mark a payment as successful and activate the subscription.
+     * Mark a payment as successful and activate its subscription.
+     *
+     * Provider confirmation is authoritative.
+     *
+     * This method is idempotent.
      */
     public function markSuccessful(
         Payment $payment,
@@ -55,20 +82,54 @@ class PaymentService
             $payment,
             $providerReference
         ) {
-            // Idempotency: don't process the same successful payment twice.
-            if ($payment->status === PaymentStatus::SUCCESSFUL) {
-                return $payment;
+            /*
+             * Lock payment so duplicate callbacks/webhooks
+             * cannot process it simultaneously.
+             */
+            $payment = Payment::whereKey($payment->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$payment) {
+                throw new RuntimeException(
+                    'Payment record no longer exists.'
+                );
             }
 
+            /*
+             * Already successful.
+             *
+             * This makes Paystack redirects/webhooks safely
+             * repeatable.
+             */
+            if ($payment->status === PaymentStatus::SUCCESSFUL) {
+                return $payment->fresh([
+                    'subscription',
+                    'subscription.entitlements',
+                ]);
+            }
 
-            $payment->update([
-                'status' => PaymentStatus::SUCCESSFUL,
-                'paid_at' => now(),
-                'payment_reference' => $providerReference,
-            ]);
-
-
-            $subscription = $payment->subscription()->lockForUpdate()->first();
+            /*
+             * IMPORTANT:
+             *
+             * A payment marked FAILED locally does not necessarily
+             * mean Paystack failed it.
+             *
+             * For example:
+             *
+             * 10:00 - checkout started
+             * 10:06 - our 5-minute reservation expires
+             * 10:07 - Paystack confirms SUCCESS
+             *
+             * Provider confirmation must win.
+             *
+             * Therefore FAILED -> SUCCESSFUL is allowed here.
+             */
+            $subscription = Subscription::whereKey(
+                $payment->subscription_id
+            )
+                ->lockForUpdate()
+                ->first();
 
             if (!$subscription) {
                 throw new RuntimeException(
@@ -77,23 +138,79 @@ class PaymentService
             }
 
             /*
- * A cancelled subscription must never be resurrected
- * by an old payment callback.
- */
-            if ($subscription->status === SubscriptionStatus::CANCELLED) {
+             * A deliberately cancelled subscription should not
+             * be resurrected by an old payment callback.
+             *
+             * Our checkout flow no longer automatically cancels
+             * subscriptions, so this represents a genuine
+             * cancellation elsewhere in the application.
+             */
+            if (
+                $subscription->status ===
+                SubscriptionStatus::CANCELLED
+            ) {
                 throw new RuntimeException(
-                    'This subscription is no longer active.'
+                    'This subscription has been cancelled and cannot be activated.'
                 );
             }
 
-            if ($subscription->status !== SubscriptionStatus::ACTIVE) {
+            /*
+             * If another payment on this same subscription has
+             * already succeeded, don't silently process a second
+             * successful charge as the subscription payment.
+             *
+             * The current payment remains untouched so it can be
+             * investigated/refunded rather than creating a false
+             * financial state.
+             */
+            $anotherSuccessfulPayment = $subscription
+                ->payments()
+                ->where('status', PaymentStatus::SUCCESSFUL)
+                ->where('id', '!=', $payment->id)
+                ->exists();
+
+            if ($anotherSuccessfulPayment) {
+                throw new RuntimeException(
+                    'Another payment has already successfully paid for this subscription.'
+                );
+            }
+
+            /*
+             * Record provider-confirmed payment success.
+             */
+            $payment->update([
+                'status' => PaymentStatus::SUCCESSFUL,
+                'paid_at' => $payment->paid_at ?? now(),
+                'payment_reference' =>
+                    $providerReference ?? $payment->payment_reference,
+            ]);
+
+            /*
+             * Activate subscription.
+             */
+            if (
+                $subscription->status !==
+                SubscriptionStatus::ACTIVE
+            ) {
+                $startsAt = now();
+
                 $subscription->update([
                     'status' => SubscriptionStatus::ACTIVE,
+                    'starts_at' => $startsAt,
+                    'ends_at' => $startsAt
+                        ->copy()
+                        ->addDays(
+                            $subscription->mealPlan->duration_days - 1
+                        )
+                        ->endOfDay(),
                 ]);
             }
 
-            
-
+            /*
+             * Generate meal entitlements.
+             *
+             * This is idempotent.
+             */
             $this->createEntitlements($subscription);
 
             return $payment->fresh([
@@ -105,89 +222,153 @@ class PaymentService
 
     /**
      * Mark a payment as failed.
+     *
+     * Never downgrade a successful payment.
+     *
+     * This method is idempotent.
      */
     public function markFailed(Payment $payment): Payment
     {
-        if ($payment->status === PaymentStatus::SUCCESSFUL) {
-            throw new RuntimeException(
-                'A successful payment cannot be marked as failed.'
-            );
-        }
+        return DB::transaction(function () use ($payment) {
+            $payment = Payment::whereKey($payment->id)
+                ->lockForUpdate()
+                ->first();
 
-        $payment->update([
-            'status' => PaymentStatus::FAILED,
-        ]);
+            if (!$payment) {
+                throw new RuntimeException(
+                    'Payment record no longer exists.'
+                );
+            }
 
-        return $payment->fresh();
+            /*
+             * Never downgrade a successful payment.
+             */
+            if ($payment->status === PaymentStatus::SUCCESSFUL) {
+                return $payment;
+            }
+
+            /*
+             * Already failed.
+             */
+            if ($payment->status === PaymentStatus::FAILED) {
+                return $payment;
+            }
+
+            $payment->update([
+                'status' => PaymentStatus::FAILED,
+            ]);
+
+            return $payment->fresh();
+        });
     }
 
     /**
-     * Generate the meal entitlements belonging to a subscription.
+     * Generate meal entitlements belonging to a subscription.
      */
     protected function createEntitlements(
-            Subscription $subscription
-        ): void {
-            $subscription->loadMissing(
-                'mealPlan',
-                'entitlements'
+        Subscription $subscription
+    ): void {
+        $subscription->loadMissing(
+            'mealPlan',
+            'entitlements'
+        );
+
+
+
+        $startsAt = now();
+        $subscription->update([
+            'starts_at' => $startsAt,
+
+            'ends_at' => $startsAt
+                ->copy()
+                ->addDays(
+                    $subscription->mealPlan->duration_days - 1
+                )
+                ->endOfDay(),
+
+            'status' => SubscriptionStatus::ACTIVE,
+        ]);
+
+
+        /*
+         * Idempotency protection.
+         */
+        if ($subscription->entitlements()->exists()) {
+            return;
+        }
+
+        $mealPlan = $subscription->mealPlan;
+
+        if (!$mealPlan) {
+            throw new RuntimeException(
+                'Subscription does not have a valid meal plan.'
             );
+        }
 
-            // Idempotency protection.
-            if ($subscription->entitlements()->exists()) {
-                return;
-            }
+        if (!$subscription->starts_at || !$subscription->ends_at) {
+            throw new RuntimeException(
+                'Subscription dates are not configured.'
+            );
+        }
 
-            $mealPlan = $subscription->mealPlan;
+        $start = $subscription->starts_at
+            ->copy()
+            ->startOfDay();
 
-            $start = $subscription->starts_at->copy()->startOfDay();
-            $end = $subscription->ends_at->copy()->startOfDay();
+        $end = $subscription->ends_at
+            ->copy()
+            ->startOfDay();
 
-            $meals = $mealPlan->meals()
-                ->where('is_active', true)
-                ->get()
-                ->keyBy(function ($meal) {
-                    return $meal->day_of_week . ':' . $meal->meal_type;
-                });
+        $meals = $mealPlan->meals()
+            ->where('is_active', true)
+            ->get()
+            ->keyBy(function ($meal) {
+                return $meal->day_of_week . ':' . $meal->meal_type;
+            });
 
-            for (
-                $date = $start->copy();
-                $date->lte($end);
-                $date->addDay()
-            ) {
-                $dayOfWeek = $date->dayOfWeekIso;
+        for (
+            $date = $start->copy();
+            $date->lte($end);
+            $date->addDay()
+        ) {
+            $dayOfWeek = $date->dayOfWeekIso;
 
-                foreach ([
-                    'breakfast',
-                    'lunch',
-                    'supper',
-                ] as $mealType) {
+            foreach ([
+                'breakfast',
+                'lunch',
+                'supper',
+            ] as $mealType) {
 
-                    $key = $dayOfWeek . ':' . $mealType;
+                $key = $dayOfWeek . ':' . $mealType;
 
-                    $meal = $meals->get($key);
+                $meal = $meals->get($key);
 
-                    if (!$meal) {
-                        throw new RuntimeException(
-                            "No {$mealType} meal configured for {$date->format('l')}."
-                        );
-                    }
-
-                    $subscription->entitlements()->create([
-                        'meal_id' => $meal->id,
-                        'scheduled_for' => $date->toDateString(),
-                        'status' => 'available',
-                        'expires_at' => $date->copy()->endOfDay(),
-                    ]);
+                if (!$meal) {
+                    throw new RuntimeException(
+                        "No {$mealType} meal configured for "
+                        . "{$date->format('l')}."
+                    );
                 }
+
+                $subscription->entitlements()->create([
+                    'meal_id' => $meal->id,
+                    'scheduled_for' => $date->toDateString(),
+                    'status' => 'available',
+                    'expires_at' => $date->copy()->endOfDay(),
+                ]);
             }
         }
+    }
+
     /**
      * Generate an internal payment reference.
      */
     protected function generateReference(): string
     {
         do {
-            $reference = 'SS-' . strtoupper(Str::random(12));
+            $reference = 'SS-' . strtoupper(
+                Str::random(12)
+            );
         } while (
             Payment::where(
                 'transaction_reference',

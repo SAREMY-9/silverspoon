@@ -16,10 +16,16 @@ use App\Http\Controllers\AdminMealController;
 use App\Http\Controllers\AdminMealPlanController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\AdminPaymentController;
+use App\Http\Controllers\AdminSubscriptionController;
+use App\Http\Controllers\RoleDashboardController;
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\StaffDashboardController;
 
 
 Route::get('/', [HomeController::class, 'index'])
-    ->name('home');
+    ->name('landing');
 
 /*
 |--------------------------------------------------------------------------
@@ -71,10 +77,22 @@ Route::get('/plans/{mealPlan}', [
 
 Route::middleware('auth')->group(function () {
 
+
+    // Role-aware entry point
+    Route::get('/home', [RoleDashboardController::class, 'index'])
+        ->name('home');
+
+
+    Route::get('/staff/dashboard', [StaffDashboardController::class, 'index'])
+        ->name('staff.dashboard');
+
+    // Existing customer dashboard
+
     Route::get('/dashboard', [
         DashboardController::class,
         'index',
     ])->name('dashboard');
+
 
     Route::post('/logout', [
         AuthenticatedSessionController::class,
@@ -196,6 +214,12 @@ Route::middleware('auth')->group(function () {
         // Meal administration
     Route::prefix('admin')->group(function () {
 
+
+      /*
+    |--------------------------------------------------------------------------
+    | MEAL ADMINISTRATION
+    |--------------------------------------------------------------------------
+    */
             Route::resource(
                 'meal-plans',
                 AdminMealPlanController::class
@@ -217,7 +241,96 @@ Route::middleware('auth')->group(function () {
                 [AdminMealController::class, 'toggle']
             )->name('admin.meals.toggle');
 
-        });
+
+
+             /*
+    |--------------------------------------------------------------------------
+    | USER MANAGEMENT
+    |--------------------------------------------------------------------------
+    */
+
+            Route::resource(
+                'users',
+                AdminUserController::class
+            )->names('admin.users');
+
+            Route::post(
+                'users/{user}/toggle',
+                [AdminUserController::class, 'toggle']
+            )->name('admin.users.toggle');
+
+            Route::post(
+                'users/{user}/reset-password',
+                [AdminUserController::class, 'resetPassword']
+            )->name('admin.users.reset-password');
+
+
+
+             /*
+    |--------------------------------------------------------------------------
+    | Payment administration
+    |--------------------------------------------------------------------------
+    */
+
+            Route::get(
+                '/payments',
+                [AdminPaymentController::class, 'index']
+            )->name('admin.payments.index');
+
+            Route::get(
+                '/payments/{payment}',
+                [AdminPaymentController::class, 'show']
+            )->name('admin.payments.show');
+
+            Route::post(
+                '/payments/{payment}/verify',
+                [AdminPaymentController::class, 'verify']
+            )->name('admin.payments.verify');
+
+
+
+            /*
+|--------------------------------------------------------------------------
+| SUBSCRIPTION ADMINISTRATION
+|--------------------------------------------------------------------------
+*/
+
+            Route::get(
+                'subscriptions',
+                [AdminSubscriptionController::class, 'index']
+            )->name('admin.subscriptions.index');
+
+            Route::get(
+                'subscriptions/{subscription}',
+                [AdminSubscriptionController::class, 'show']
+            )->name('admin.subscriptions.show');
+
+            Route::post(
+                'subscriptions/{subscription}/cancel',
+                [AdminSubscriptionController::class, 'cancel']
+            )->name('admin.subscriptions.cancel');
+
+            Route::post(
+                'subscriptions/{subscription}/reactivate',
+                [AdminSubscriptionController::class, 'reactivate']
+            )->name('admin.subscriptions.reactivate');
+
+
+
+                    /*
+        |--------------------------------------------------------------------------
+        ADMIN DASHBOARD
+        |--------------------------------------------------------------------------
+        */
+
+            Route::get('/dashboard', [AdminDashboardController::class, 'index'])
+        ->name('admin.dashboard');
+
+
+
+    });
+
+
 
 
 });

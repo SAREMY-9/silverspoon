@@ -1,228 +1,192 @@
-<!DOCTYPE html>
-<html lang="en">
+@extends('layouts.app')
 
-<head>
-    <meta charset="UTF-8">
+@section('title', 'Add Meal - Silver Spoon')
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+@section('content')
 
-    <title>Add Meal - Silver Spoon</title>
+<div class="mx-auto max-w-4xl">
 
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-
-<body class="bg-gray-100 min-h-screen">
-
-<nav class="bg-black text-white">
-
-    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-
-        <div>
-
-            <h1 class="font-bold text-lg">
-                Silver Spoon
-            </h1>
-
-            <p class="text-xs text-gray-400">
-                Meal Management
-            </p>
-
-        </div>
-
-        <div class="text-sm">
-            {{ auth()->user()->name }}
-        </div>
-
-    </div>
-
-</nav>
-
-
-<main class="max-w-4xl mx-auto px-6 py-8">
-
-    {{-- Back --}}
-
-    <div class="mb-6">
-
-        <a
-            href="{{ url()->previous() }}"
-            class="text-sm text-gray-500 hover:text-black"
-        >
-            ← Back
-        </a>
-
-    </div>
-
-
-    {{-- Header --}}
+    {{-- HEADER --}}
 
     <div class="mb-8">
 
-        <h2 class="text-3xl font-bold">
-            Add Meal
-        </h2>
+        <div class="mb-4">
 
-        <p class="text-gray-500 mt-2">
+            <a
+                href="{{ url()->previous() }}"
+                class="text-sm font-medium text-slate-500 transition hover:text-slate-900"
+            >
+                ← Back
+            </a>
+
+        </div>
+
+        <h1 class="text-3xl font-bold tracking-tight text-slate-900">
+            Add Meal
+        </h1>
+
+        <p class="mt-2 text-slate-500">
             Add a meal to a meal plan's weekly schedule.
         </p>
 
     </div>
 
 
-    {{-- Validation errors --}}
-
-    @if($errors->any())
-
-        <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-5">
-
-            <p class="font-semibold text-red-800 mb-2">
-                Please fix the following:
-            </p>
-
-            <ul class="list-disc list-inside text-sm text-red-700 space-y-1">
-
-                @foreach($errors->all() as $error)
-
-                    <li>
-                        {{ $error }}
-                    </li>
-
-                @endforeach
-
-            </ul>
-
-        </div>
-
-    @endif
-
-
-    {{-- Form --}}
+    {{-- FORM --}}
 
     <form
         method="POST"
         action="{{ route('admin.meals.store') }}"
         enctype="multipart/form-data"
-        class="bg-white border rounded-2xl p-6 md:p-8"
+        class="overflow-hidden rounded-2xl border border-slate-200 bg-white"
     >
 
         @csrf
 
 
-        {{-- Meal Plan --}}
-        
-    <div class="mb-6">
-        <label class="block text-sm font-semibold mb-2">
-            Meal Plan
-        </label>
+        <div class="p-6 md:p-8">
 
-        <select
-            name="meal_plan_id"
-            required
-            class="w-full border rounded-xl px-4 py-3"
-        >
-            <option value="">
-                Select meal plan
-            </option>
+            {{-- MEAL PLAN --}}
 
-            @foreach($mealPlans as $plan)
-
-                <option
-                    value="{{ $plan->id }}"
-                    @selected(
-                        old('meal_plan_id', $selectedMealPlanId ?? '') == $plan->id
-                    )
-                >
-                    {{ $plan->name }}
-                </option>
-
-            @endforeach
-        </select>
-
-        @error('meal_plan_id')
-            <p class="text-red-600 text-sm mt-1">
-                {{ $message }}
-            </p>
-        @enderror
-    </div>
-
-        {{-- Meal Name --}}
-
-        <div class="mb-6">
-
-            <label
-                for="name"
-                class="block text-sm font-semibold mb-2"
-            >
-                Meal Name
-            </label>
-
-            <input
-                type="text"
-                id="name"
-                name="name"
-                value="{{ old('name') }}"
-                required
-                maxlength="255"
-                placeholder="e.g. Beef Pilau & Vegetables"
-                class="w-full border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-black"
-            >
-
-        </div>
-
-
-        {{-- Description --}}
-
-        <div class="mb-6">
-
-            <label
-                for="description"
-                class="block text-sm font-semibold mb-2"
-            >
-                Description
-            </label>
-
-            <textarea
-                id="description"
-                name="description"
-                rows="4"
-                placeholder="Describe the meal..."
-                class="w-full border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-black"
-            >{{ old('description') }}</textarea>
-
-        </div>
-
-
-        {{-- Day + Meal Type --}}
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-
-            {{-- Day --}}
-
-            <div>
+            <div class="mb-6">
 
                 <label
-                    for="day_of_week"
-                    class="block text-sm font-semibold mb-2"
+                    for="meal_plan_id"
+                    class="mb-2 block text-sm font-semibold text-slate-900"
                 >
-                    Day of Week
+                    Meal Plan
                 </label>
 
                 <select
-                    id="day_of_week"
-                    name="day_of_week"
+                    id="meal_plan_id"
+                    name="meal_plan_id"
                     required
-                    class="w-full border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-black"
+                    class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm transition focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
                 >
 
                     <option value="">
-                        Select day
+                        Select meal plan
                     </option>
 
-                    @php
-                        $days = [
+                    @foreach($mealPlans as $plan)
+
+                        <option
+                            value="{{ $plan->id }}"
+                            @selected(
+                                old(
+                                    'meal_plan_id',
+                                    request('meal_plan_id', '')
+                                ) == $plan->id
+                            )
+                        >
+                            {{ $plan->name }}
+                        </option>
+
+                    @endforeach
+
+                </select>
+
+                @error('meal_plan_id')
+
+                    <p class="mt-1 text-sm text-red-600">
+                        {{ $message }}
+                    </p>
+
+                @enderror
+
+            </div>
+
+
+            {{-- MEAL NAME --}}
+
+            <div class="mb-6">
+
+                <label
+                    for="name"
+                    class="mb-2 block text-sm font-semibold text-slate-900"
+                >
+                    Meal Name
+                </label>
+
+                <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value="{{ old('name') }}"
+                    required
+                    maxlength="255"
+                    placeholder="e.g. Beef Pilau & Vegetables"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm transition focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                >
+
+                @error('name')
+
+                    <p class="mt-1 text-sm text-red-600">
+                        {{ $message }}
+                    </p>
+
+                @enderror
+
+            </div>
+
+
+            {{-- DESCRIPTION --}}
+
+            <div class="mb-6">
+
+                <label
+                    for="description"
+                    class="mb-2 block text-sm font-semibold text-slate-900"
+                >
+                    Description
+                </label>
+
+                <textarea
+                    id="description"
+                    name="description"
+                    rows="4"
+                    placeholder="Describe the meal..."
+                    class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm transition focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                >{{ old('description') }}</textarea>
+
+                @error('description')
+
+                    <p class="mt-1 text-sm text-red-600">
+                        {{ $message }}
+                    </p>
+
+                @enderror
+
+            </div>
+
+
+            {{-- DAY + TYPE --}}
+
+            <div class="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+
+                {{-- DAY --}}
+
+                <div>
+
+                    <label
+                        for="day_of_week"
+                        class="mb-2 block text-sm font-semibold text-slate-900"
+                    >
+                        Day of Week
+                    </label>
+
+                    <select
+                        id="day_of_week"
+                        name="day_of_week"
+                        required
+                        class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm transition focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    >
+
+                        <option value="">
+                            Select day
+                        </option>
+
+                        @foreach([
                             1 => 'Monday',
                             2 => 'Tuesday',
                             3 => 'Wednesday',
@@ -230,164 +194,181 @@
                             5 => 'Friday',
                             6 => 'Saturday',
                             7 => 'Sunday',
-                        ];
-                    @endphp
+                        ] as $number => $day)
 
-                    @foreach($days as $number => $day)
+                            <option
+                                value="{{ $number }}"
+                                @selected(
+                                    old(
+                                        'day_of_week',
+                                        request('day_of_week', '')
+                                    ) == $number
+                                )
+                            >
+                                {{ $day }}
+                            </option>
 
-                        <option
-                            value="{{ $number }}"
-                            @selected(
-                                old('day_of_week', $selectedDayOfWeek) == $number
-                            )
-                        >
-                            {{ $day }}
+                        @endforeach
+
+                    </select>
+
+                    @error('day_of_week')
+
+                        <p class="mt-1 text-sm text-red-600">
+                            {{ $message }}
+                        </p>
+
+                    @enderror
+
+                </div>
+
+
+                {{-- TYPE --}}
+
+                <div>
+
+                    <label
+                        for="meal_type"
+                        class="mb-2 block text-sm font-semibold text-slate-900"
+                    >
+                        Meal Type
+                    </label>
+
+                    <select
+                        id="meal_type"
+                        name="meal_type"
+                        required
+                        class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm transition focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    >
+
+                        <option value="">
+                            Select meal type
                         </option>
 
-                    @endforeach
+                        @foreach([
+                            'breakfast' => 'Breakfast',
+                            'lunch' => 'Lunch',
+                            'supper' => 'Supper',
+                        ] as $value => $label)
 
-                </select>
+                            <option
+                                value="{{ $value }}"
+                                @selected(
+                                    old(
+                                        'meal_type',
+                                        request('meal_type', '')
+                                    ) === $value
+                                )
+                            >
+                                {{ $label }}
+                            </option>
+
+                        @endforeach
+
+                    </select>
+
+                    @error('meal_type')
+
+                        <p class="mt-1 text-sm text-red-600">
+                            {{ $message }}
+                        </p>
+
+                    @enderror
+
+                </div>
 
             </div>
 
 
-            {{-- Meal Type --}}
+            {{-- IMAGE --}}
+
+            <div class="mb-6">
+
+                <label
+                    for="image"
+                    class="mb-2 block text-sm font-semibold text-slate-900"
+                >
+                    Meal Image
+                </label>
+
+                <input
+                    type="file"
+                    id="image"
+                    name="image"
+                    accept="image/*"
+                    class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
+                >
+
+                <p class="mt-2 text-xs text-slate-500">
+                    Maximum size: 5MB.
+                </p>
+
+                @error('image')
+
+                    <p class="mt-1 text-sm text-red-600">
+                        {{ $message }}
+                    </p>
+
+                @enderror
+
+            </div>
+
+
+            {{-- ACTIVE --}}
 
             <div>
 
-                <label
-                    for="meal_type"
-                    class="block text-sm font-semibold mb-2"
-                >
-                    Meal Type
+                <label class="flex cursor-pointer items-start gap-3">
+
+                    <input
+                        type="checkbox"
+                        name="is_active"
+                        value="1"
+                        @checked(old('is_active', true))
+                        class="mt-1 h-5 w-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                    >
+
+                    <span>
+
+                        <span class="block font-semibold text-slate-900">
+                            Active meal
+                        </span>
+
+                        <span class="mt-1 block text-sm text-slate-500">
+                            Customers can see and redeem this meal.
+                        </span>
+
+                    </span>
+
                 </label>
-
-                <select
-                    id="meal_type"
-                    name="meal_type"
-                    required
-                    class="w-full border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-black"
-                >
-
-                    <option value="">
-                        Select meal type
-                    </option>
-
-                    <option
-                        value="breakfast"
-                        @selected(
-                            old('meal_type', $selectedMealType) === 'breakfast'
-                        )
-                    >
-                        Breakfast
-                    </option>
-
-                    <option
-                        value="lunch"
-                        @selected(
-                            old('meal_type', $selectedMealType) === 'lunch'
-                        )
-                    >
-                        Lunch
-                    </option>
-
-                    <option
-                        value="supper"
-                        @selected(
-                            old('meal_type', $selectedMealType) === 'supper'
-                        )
-                    >
-                        Supper
-                    </option>
-
-                </select>
 
             </div>
 
         </div>
 
 
-        {{-- Image --}}
+        {{-- ACTIONS --}}
 
-        <div class="mb-6">
-
-            <label
-                for="image"
-                class="block text-sm font-semibold mb-2"
-            >
-                Meal Image
-            </label>
-
-            <input
-                type="file"
-                id="image"
-                name="image"
-                accept="image/*"
-                class="w-full border rounded-xl px-4 py-3"
-            >
-
-            <p class="text-xs text-gray-500 mt-2">
-                Maximum size: 5MB.
-            </p>
-
-        </div>
-
-
-        {{-- Status --}}
-
-        <div class="mb-8">
-
-            <label class="flex items-center gap-3 cursor-pointer">
-
-                <input
-                    type="checkbox"
-                    name="is_active"
-                    value="1"
-                    @checked(old('is_active', true))
-                    class="w-5 h-5"
-                >
-
-                <span>
-
-                    <span class="block font-semibold">
-                        Active meal
-                    </span>
-
-                    <span class="block text-sm text-gray-500">
-                        Customers can see and redeem this meal.
-                    </span>
-
-                </span>
-
-            </label>
-
-        </div>
-
-
-        {{-- Actions --}}
-
-        <div class="flex flex-col sm:flex-row gap-3">
-
-            <button
-                type="submit"
-                class="flex-1 bg-black text-white px-5 py-3 rounded-xl font-semibold hover:bg-gray-800"
-            >
-                Create Meal
-            </button>
+        <div class="flex flex-col-reverse gap-3 border-t border-slate-200 bg-slate-50 p-6 sm:flex-row sm:justify-end">
 
             <a
                 href="{{ url()->previous() }}"
-                class="px-6 py-3 rounded-xl bg-gray-100 text-center font-semibold hover:bg-gray-200"
+                class="rounded-xl border border-slate-300 bg-white px-6 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
             >
                 Cancel
             </a>
+
+            <button
+                type="submit"
+                class="rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+                Create Meal
+            </button>
 
         </div>
 
     </form>
 
-</main>
+</div>
 
-</body>
-
-</html>
+@endsection

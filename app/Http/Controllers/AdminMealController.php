@@ -336,4 +336,11 @@ class AdminMealController extends Controller
                 : 'Meal deactivated.'
         );
     }
+
+    public function show($meal)
+    {
+        $meal = Meal::with('mealPlan')->findOrFail($meal);
+
+        return view('admin.meals.show', compact('meal'));
+    }
 }
