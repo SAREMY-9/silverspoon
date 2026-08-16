@@ -16,6 +16,7 @@ class Meal extends Model
         'name',
         'description',
         'image',
+        'price',
         'meal_type',
         'day_of_week',
         'is_active',
@@ -24,6 +25,7 @@ class Meal extends Model
     protected function casts(): array
         {
             return [
+                'price' => 'decimal:2',
                 'day_of_week' => 'integer',
                 'is_active' => 'boolean',
             ];
@@ -43,4 +45,13 @@ class Meal extends Model
     {
         return $this->hasMany(MealRedemption::class);
     }
+
+
+    public function subscriptionSelections(): HasMany
+    {
+        return $this->hasMany(
+            SubscriptionMealSelection::class
+        );
+    }
+
 }

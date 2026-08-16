@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 
+
+
 class Subscription extends Model
 {
     use HasFactory;
@@ -51,4 +53,11 @@ class Subscription extends Model
     {
         return $this->hasMany(Payment::class);
     }
+
+    public function mealSelections(): HasMany
+    {
+        return $this->hasMany(SubscriptionMealSelection::class);
+    }
+
+
 }

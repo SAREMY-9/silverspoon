@@ -215,40 +215,70 @@
             </div>
 
 
-            <div class="mt-10">
+        <div class="mt-10">
 
-                @auth
+            @auth
+
+                {{-- CUSTOM OPTION --}}
+                <a
+                    href="{{ route('meal-plans.customize', $mealPlan) }}"
+                    class="block w-full text-center bg-black text-white rounded-xl
+                        py-4 font-semibold text-lg hover:bg-gray-800 transition"
+                >
+                    Customize {{ $mealPlan->name }}
+                </a>
+
+                <p class="text-center text-sm text-gray-500 mt-3">
+                    Choose your preferred meals before payment.
+                </p>
+
+
+                {{-- INCLUDED SCHEDULE OPTION --}}
+                <div class="mt-6">
+
+                    <p class="text-center text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">
+                        Or use the included schedule
+                    </p>
 
                     <a
                         href="{{ route('checkout.show', $mealPlan) }}"
-                        class="block text-center w-full bg-black text-white rounded-xl py-4 font-semibold text-lg hover:bg-gray-800 transition"
+                        class="block w-full text-center border-2 border-gray-900
+                            text-gray-900 rounded-xl py-4 font-semibold text-lg
+                            hover:bg-gray-50 transition"
                     >
-                        Subscribe for KES {{ number_format($mealPlan->price, 0) }}
-                    </a>
-
-                @else
-
-                    <a
-                        href="{{ route('login') }}"
-                        class="block text-center w-full bg-black text-white rounded-xl py-4 font-semibold text-lg hover:bg-gray-800 transition"
-                    >
-                        Login to Subscribe
+                        Continue with {{ $mealPlan->name }}
                     </a>
 
                     <p class="text-center text-sm text-gray-500 mt-3">
-                        Don't have an account?
-
-                        <a
-                            href="{{ route('register') }}"
-                            class="font-semibold text-black hover:underline"
-                        >
-                            Create one
-                        </a>
+                        Keep the meals already scheduled for this plan.
                     </p>
 
-                @endauth
-            </div>
+                </div>
 
+            @else
+
+                <a
+                    href="{{ route('login') }}"
+                    class="block text-center w-full bg-black text-white rounded-xl
+                        py-4 font-semibold text-lg hover:bg-gray-800 transition"
+                >
+                    Login to Subscribe
+                </a>
+
+                <p class="text-center text-sm text-gray-500 mt-3">
+                    Don't have an account?
+
+                    <a
+                        href="{{ route('register') }}"
+                        class="font-semibold text-black hover:underline"
+                    >
+                        Create one
+                    </a>
+                </p>
+
+            @endauth
+
+        </div>
         </div>
 
     </div>

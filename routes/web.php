@@ -22,7 +22,7 @@ use App\Http\Controllers\AdminSubscriptionController;
 use App\Http\Controllers\RoleDashboardController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\StaffDashboardController;
-
+use App\Http\Controllers\MealCustomizationController;
 
 Route::get('/', [HomeController::class, 'index'])
     ->name('landing');
@@ -58,15 +58,29 @@ Route::middleware('guest')->group(function () {
 
 
 
-Route::get('/plans', [
-    MealPlanController::class,
-    'index',
-])->name('meal-plans.index');
+    Route::get('/plans', [
+        MealPlanController::class,
+        'index',
+    ])->name('meal-plans.index');
 
-Route::get('/plans/{mealPlan}', [
-    MealPlanController::class,
-    'show',
-])->name('meal-plans.show');
+    Route::get('/plans/{mealPlan}', [
+        MealPlanController::class,
+        'show',
+    ])->name('meal-plans.show');
+
+
+
+    // Meal customization  
+
+    Route::get(
+        '/plans/{mealPlan}/customize',
+        [MealCustomizationController::class, 'create']
+    )->name('meal-plans.customize');
+
+    Route::post(
+        '/plans/{mealPlan}/customize',
+        [MealCustomizationController::class, 'store']
+    )->name('meal-plans.customize.store');
 
 
 /*
@@ -132,6 +146,7 @@ Route::middleware('auth')->group(function () {
         '/dashboard/meals/{mealEntitlement}/redeem',
         [MealRedemptionController::class, 'store']
     )->name('dashboard.meals.redeem');
+
 });
 
 
