@@ -225,58 +225,90 @@
 
                 {{-- TYPE --}}
 
-                <div>
+<div>
 
-                    <label
-                        for="meal_type"
-                        class="mb-2 block text-sm font-semibold text-slate-900"
-                    >
-                        Meal Type
-                    </label>
+        <label
+            for="meal_type"
+            class="mb-2 block text-sm font-semibold text-slate-900"
+        >
+            Meal Type
+        </label>
 
-                    <select
-                        id="meal_type"
-                        name="meal_type"
-                        required
-                        class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm transition focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                    >
+        <select
+            id="meal_type"
+            name="meal_type"
+            required
+            class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm transition focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+        >
 
-                        <option value="">
-                            Select meal type
-                        </option>
+            <option value="breakfast"
+                @selected(old('meal_type') === 'breakfast')>
+                Breakfast
+            </option>
 
-                        @foreach([
-                            'breakfast' => 'Breakfast',
-                            'lunch' => 'Lunch',
-                            'supper' => 'Supper',
-                        ] as $value => $label)
+            <option value="lunch"
+                @selected(old('meal_type') === 'lunch')>
+                Lunch
+            </option>
 
-                            <option
-                                value="{{ $value }}"
-                                @selected(
-                                    old(
-                                        'meal_type',
-                                        request('meal_type', '')
-                                    ) === $value
-                                )
-                            >
-                                {{ $label }}
-                            </option>
+            <option value="supper"
+                @selected(old('meal_type') === 'supper')>
+                Supper
+            </option>
 
-                        @endforeach
+        </select>
 
-                    </select>
+        @error('meal_type')
+            <p class="mt-1 text-sm text-red-600">
+                {{ $message }}
+            </p>
+        @enderror
 
-                    @error('meal_type')
+    </div>
 
-                        <p class="mt-1 text-sm text-red-600">
-                            {{ $message }}
-                        </p>
 
-                    @enderror
+    {{-- PRICE --}}
 
-                </div>
+        <div>
 
+            <label
+                for="price"
+                class="mb-2 block text-sm font-semibold text-slate-900"
+            >
+                Meal Price
+            </label>
+
+            <div class="relative">
+
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-500">
+                    KES
+                </span>
+
+                <input
+                    id="price"
+                    type="number"
+                    name="price"
+                    value="{{ old('price') }}"
+                    min="0"
+                    step="0.01"
+                    required
+                    placeholder="0.00"
+                    class="w-full rounded-xl border border-slate-300 bg-white py-3 pl-14 pr-4 text-sm transition focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                >
+
+            </div>
+
+            <p class="mt-2 text-xs text-slate-500">
+                Price used when calculating customized meal selections.
+            </p>
+
+            @error('price')
+                <p class="mt-1 text-sm text-red-600">
+                    {{ $message }}
+                </p>
+            @enderror
+
+        </div>
             </div>
 
 

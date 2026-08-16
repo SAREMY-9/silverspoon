@@ -238,45 +238,92 @@
 
                 {{-- TYPE --}}
 
+<div>
+
+        <label
+            for="meal_type"
+            class="mb-2 block text-sm font-semibold text-slate-900"
+        >
+            Meal Type
+        </label>
+
+        <select
+            id="meal_type"
+            name="meal_type"
+            required
+            class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm transition focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+        >
+
+            @foreach([
+                'breakfast' => 'Breakfast',
+                'lunch' => 'Lunch',
+                'supper' => 'Supper',
+            ] as $value => $label)
+
+                <option
+                    value="{{ $value }}"
+                    @selected(
+                        old(
+                            'meal_type',
+                            $meal->meal_type
+                        ) === $value
+                    )
+                >
+                    {{ $label }}
+                </option>
+
+            @endforeach
+
+        </select>
+
+        @error('meal_type')
+
+            <p class="mt-1 text-sm text-red-600">
+                {{ $message }}
+            </p>
+
+        @enderror
+
+    </div>
+
+
+    {{-- PRICE --}}
+
                 <div>
 
                     <label
-                        for="meal_type"
+                        for="price"
                         class="mb-2 block text-sm font-semibold text-slate-900"
                     >
-                        Meal Type
+                        Meal Price
                     </label>
 
-                    <select
-                        id="meal_type"
-                        name="meal_type"
-                        required
-                        class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm transition focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                    >
+                    <div class="relative">
 
-                        @foreach([
-                            'breakfast' => 'Breakfast',
-                            'lunch' => 'Lunch',
-                            'supper' => 'Supper',
-                        ] as $value => $label)
+                        <span
+                            class="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-500"
+                        >
+                            KES
+                        </span>
 
-                            <option
-                                value="{{ $value }}"
-                                @selected(
-                                    old(
-                                        'meal_type',
-                                        $meal->meal_type
-                                    ) === $value
-                                )
-                            >
-                                {{ $label }}
-                            </option>
+                        <input
+                            id="price"
+                            type="number"
+                            name="price"
+                            value="{{ old('price', $meal->price) }}"
+                            min="0"
+                            step="0.01"
+                            required
+                            class="w-full rounded-xl border border-slate-300 bg-white py-3 pl-14 pr-4 text-sm transition focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                        >
 
-                        @endforeach
+                    </div>
 
-                    </select>
+                    <p class="mt-2 text-xs text-slate-500">
+                        Price used when calculating customized meal selections.
+                    </p>
 
-                    @error('meal_type')
+                    @error('price')
 
                         <p class="mt-1 text-sm text-red-600">
                             {{ $message }}
@@ -285,7 +332,6 @@
                     @enderror
 
                 </div>
-
             </div>
 
 
