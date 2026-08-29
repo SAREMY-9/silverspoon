@@ -25,7 +25,7 @@ class MealCustomizationController extends Controller
                 END
             ")
             ->get();
-
+        
         return view(
             'meal-plans.customize',
             compact(

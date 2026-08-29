@@ -126,7 +126,7 @@ class SubscriptionService
                         $remainingMinutes = max(
                             1,
                             (int) ceil(
-                                $remainingSeconds / 60
+                                $remainingSeconds / 15
                             )
                         );
 

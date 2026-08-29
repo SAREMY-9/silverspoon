@@ -290,133 +290,167 @@ class PaymentService
                 'mealSelections.meal'
             );
 
+            
+        /*
+        * ---------------------------------------------------------
+        * CUSTOM SUBSCRIPTION
+        * ---------------------------------------------------------
+        *
+        * For custom subscriptions:
+        *
+        * The customer's selected meals define the weekly
+        * recurring schedule.
+        *
+        * Example:
+        *
+        * Monday supper
+        * Tuesday breakfast
+        * Tuesday supper
+        * Wednesday lunch
+        *
+        * A 7-day plan:
+        *   1 occurrence of each selection
+        *
+        * A 30-day plan:
+        *   4 occurrences of each selection
+        *
+        * A 90-day plan:
+        *   12 occurrences of each selection
+        *
+        * The number of occurrences is therefore determined
+        * by the meal plan duration.
+        */
+
+        $customSelections = $subscription
+            ->mealSelections()
+            ->get();
+
+        if ($customSelections->isNotEmpty()) {
+
             /*
-            * ---------------------------------------------------------
-            * CUSTOM SUBSCRIPTION
-            * ---------------------------------------------------------
+            * Number of complete recurring weeks.
             *
-            * For custom subscriptions:
-            *
-            * selections define:
-            * 1. Which meals are delivered
-            * 2. Which days they are delivered
-            * 3. The total price
-            *
-            * The meal plan duration is NOT used to determine
-            * the custom schedule.
+            * 7 days  = 1 week
+            * 30 days = 4 weeks
+            * 90 days = 12 weeks
             */
+            $occurrences = max(
+                1,
+                intdiv(
+                    $subscription->mealPlan->duration_days,
+                    7
+                )
+            );
 
-            $customSelections = $subscription
-                ->mealSelections()
-                ->get();
+            /*
+            * Start scheduling from today.
+            */
+            $start = now()
+                ->copy()
+                ->startOfDay();
 
-            if ($customSelections->isNotEmpty()) {
+            /*
+            * Store all generated delivery dates.
+            */
+            $deliveryDates = collect();
+
+            /*
+            * -----------------------------------------------------
+            * GENERATE OCCURRENCES
+            * -----------------------------------------------------
+            *
+            * Each selected meal is repeated once per week
+            * for the duration of the plan.
+            */
+            foreach ($customSelections as $selection) {
+
+                $dayOfWeek = (int) $selection->day_of_week;
 
                 /*
-                * Four occurrences of every selected
-                * day/meal combination.
+                * Find the next occurrence of the selected weekday.
                 */
-                $occurrences = 4;
+                $date = $start->copy();
+
+                while ($date->dayOfWeekIso !== $dayOfWeek) {
+                    $date->addDay();
+                }
 
                 /*
-                * Start scheduling from the next occurrence
-                * of the selected weekday.
+                * Repeat the selected meal according to the
+                * number of weeks in the meal plan.
                 */
-                $start = now()->copy()->startOfDay();
+                for ($i = 0; $i < $occurrences; $i++) {
 
-                /*
-                * Build lookup map.
-                */
+                    $deliveryDate = $date
+                        ->copy()
+                        ->addWeeks($i);
 
-                $deliveryDates = collect();
-
-                /*
-                * -----------------------------------------------------
-                * GENERATE EXACTLY 4 OCCURRENCES
-                * FOR EACH SELECTED DAY/MEAL
-                * -----------------------------------------------------
-                */
-                foreach ($customSelections as $selection) {
-
-                    $dayOfWeek = (int) $selection->day_of_week;
-
-                    /*
-                    * Find the next occurrence of this weekday.
-                    */
-                    $date = $start->copy();
-
-                    while ($date->dayOfWeekIso !== $dayOfWeek) {
-                        $date->addDay();
-                    }
-
-                    /*
-                    * Generate exactly 4 deliveries.
-                    */
-                    for ($i = 0; $i < $occurrences; $i++) {
-
-                        $deliveryDate = $date
+                    $deliveryDates->push([
+                        'meal_id' => $selection->meal_id,
+                        'scheduled_for' => $deliveryDate->toDateString(),
+                        'status' => 'available',
+                        'expires_at' => $deliveryDate
                             ->copy()
-                            ->addWeeks($i);
-
-                        $deliveryDates->push([
-                            'meal_id' => $selection->meal_id,
-                            'scheduled_for' => $deliveryDate->toDateString(),
-                            'status' => 'available',
-                            'expires_at' => $deliveryDate
-                                ->copy()
-                                ->endOfDay(),
-                        ]);
-                    }
+                            ->endOfDay(),
+                    ]);
                 }
+            }
 
-                /*
-                * Sort deliveries chronologically.
-                */
-                $deliveryDates = $deliveryDates
-                    ->sortBy('scheduled_for')
-                    ->values();
+            /*
+            * Sort deliveries chronologically.
+            */
+            $deliveryDates = $deliveryDates
+                ->sortBy('scheduled_for')
+                ->values();
 
-                /*
-                * Subscription starts on the first delivery.
-                */
-                $firstDelivery = $deliveryDates->first();
-                $lastDelivery = $deliveryDates->last();
+            /*
+            * Make sure we actually generated deliveries.
+            */
+            $firstDelivery = $deliveryDates->first();
+            $lastDelivery = $deliveryDates->last();
 
-                if (!$firstDelivery || !$lastDelivery) {
-                    throw new RuntimeException(
-                        'No custom meal deliveries could be generated.'
-                    );
-                }
+            if (!$firstDelivery || !$lastDelivery) {
+                throw new RuntimeException(
+                    'No custom meal deliveries could be generated.'
+                );
+            }
 
-                $subscription->update([
-                    'starts_at' => \Carbon\Carbon::parse(
-                        $firstDelivery['scheduled_for']
-                    )->startOfDay(),
+            /*
+            * Subscription dates follow the generated custom
+            * delivery schedule.
+            */
+            $subscription->update([
+                'starts_at' => \Carbon\Carbon::parse(
+                    $firstDelivery['scheduled_for']
+                )->startOfDay(),
 
-                    'ends_at' => \Carbon\Carbon::parse(
-                        $lastDelivery['scheduled_for']
-                    )->endOfDay(),
+                'ends_at' => \Carbon\Carbon::parse(
+                    $lastDelivery['scheduled_for']
+                )->endOfDay(),
 
-                    'status' => SubscriptionStatus::ACTIVE,
-                ]);
+                'status' => SubscriptionStatus::ACTIVE,
+            ]);
 
-                /*
-                * Idempotency protection.
-                */
-                if ($subscription->entitlements()->exists()) {
-                    return;
-                }
-
-                /*
-                * Create the actual delivery entitlements.
-                */
-                foreach ($deliveryDates as $delivery) {
-                    $subscription->entitlements()->create($delivery);
-                }
-
+            /*
+            * Idempotency protection.
+            *
+            * Never create duplicate entitlements if this payment
+            * callback is received more than once.
+            */
+            if ($subscription->entitlements()->exists()) {
                 return;
             }
 
+            /*
+            * Create the actual meal delivery entitlements.
+            */
+            foreach ($deliveryDates as $delivery) {
+
+                $subscription->entitlements()->create($delivery);
+            }
+
+            return;
+        }
             /*
             * ---------------------------------------------------------
             * STANDARD MEAL PLAN
