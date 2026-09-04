@@ -10,6 +10,7 @@ use App\Services\SubscriptionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Enums\SubscriptionStatus;
 use Throwable;
 
 class CheckoutController extends Controller
@@ -190,23 +191,6 @@ class CheckoutController extends Controller
                 }
             }
 
-            if ($subscription) {
-                try {
-                    $subscription->update([
-                        'status' => 'cancelled',
-                    ]);
-                } catch (Throwable $subscriptionException) {
-                    Log::error(
-                        'Failed to cancel subscription after checkout failure',
-                        [
-                            'subscription_id' =>
-                                $subscription->id,
-                            'error' =>
-                                $subscriptionException->getMessage(),
-                        ]
-                    );
-                }
-            }
 
             Log::error('Silver Spoon checkout failed', [
                 'user_id' => $request->user()?->id,
@@ -231,20 +215,50 @@ class CheckoutController extends Controller
     }
 
 
-    public function show(MealPlan $mealPlan)
-    {
-        if (!$mealPlan->is_active) {
-            abort(404);
-        }
-
-        $mealPlan->load([
-            'meals' => function ($query) {
-                $query->where('is_active', true)
-                    ->orderBy('day_of_week')
-                    ->orderBy('meal_type');
+    public function show(
+            MealPlan $mealPlan,
+            SubscriptionService $subscriptionService
+        ) {
+            if (!$mealPlan->is_active) {
+                abort(404);
             }
-        ]);
 
-        return view('checkout', compact('mealPlan'));
-    }
+            $mealPlan->load([
+                'meals' => function ($query) {
+                    $query->where('is_active', true)
+                        ->orderBy('day_of_week')
+                        ->orderBy('meal_type');
+                }
+            ]);
+
+            $subscription = auth()->user()
+                ->subscriptions()
+                ->where('status', \App\Enums\SubscriptionStatus::PENDING)
+                ->latest()
+                ->first();
+
+            if ($subscription) {
+                $subscription->load([
+                    'mealSelections.meal'
+                ]);
+            }
+
+            $isCustom = $subscription
+                && $subscription->mealSelections->isNotEmpty();
+
+            $customTotal = null;
+
+            if ($isCustom) {
+                $customTotal = app(
+                    \App\Services\MealCustomizationService::class
+                )->calculateTotal($subscription);
+            }
+
+            return view('checkout', compact(
+                'mealPlan',
+                'subscription',
+                'isCustom',
+                'customTotal'
+            ));
+        }
 }

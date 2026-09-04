@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,62 +12,299 @@
 
 <body class="bg-gray-50 min-h-screen">
 
-    <div class="max-w-5xl mx-auto px-6 py-10">
+<div class="max-w-6xl mx-auto px-6 py-10">
 
-        <div class="mb-8">
-            <a
-                href="{{ route('meal-plans.show', $mealPlan) }}"
-                class="text-sm text-gray-500 hover:text-gray-900"
-            >
-                ← Back to {{ $mealPlan->name }}
-            </a>
+    {{-- ========================================================= --}}
+    {{-- HEADER --}}
+    {{-- ========================================================= --}}
 
-            <h1 class="text-3xl font-bold text-gray-900 mt-4">
-                Complete your subscription
-            </h1>
+    <div class="mb-8">
 
-            <p class="text-gray-500 mt-2">
-                Choose your payment method to activate your meal plan.
-            </p>
-        </div>
+        <a
+            href="{{ route('meal-plans.show', $mealPlan) }}"
+            class="text-sm text-gray-500 hover:text-gray-900"
+        >
+            ← Back to {{ $mealPlan->name }}
+        </a>
+
+        <h1 class="text-3xl font-bold text-gray-900 mt-4">
+            Complete your subscription
+        </h1>
+
+        <p class="text-gray-500 mt-2">
+            Review your meal schedule and choose your payment method.
+        </p>
+
+    </div>
 
 
-        <div class="grid lg:grid-cols-3 gap-8">
+    {{-- ========================================================= --}}
+    {{-- CALCULATE CUSTOM PLAN INFORMATION --}}
+    {{-- ========================================================= --}}
 
-            {{-- PLAN SUMMARY --}}
-            <div class="lg:col-span-1">
+    @php
 
-                <div class="bg-white rounded-2xl shadow-sm border p-6 sticky top-6">
+        /*
+         * Number of recurring weeks.
+         *
+         * 7 days  = 1 week
+         * 30 days = 4 weeks
+         * 90 days = 12 weeks
+         */
+        $weeks = max(
+            1,
+            intdiv($mealPlan->duration_days, 7)
+        );
 
-                    <h2 class="text-xl font-bold text-gray-900">
-                        {{ $mealPlan->name }}
-                    </h2>
+        $weeklyMealCount = $subscription->mealSelections->count();
 
-                    <p class="text-gray-500 mt-2">
-                        {{ $mealPlan->description }}
+        $totalMealOccurrences = $weeklyMealCount * $weeks;
+
+        $displayTotal = $isCustom
+            ? $customTotal
+            : $mealPlan->price;
+
+        $dayNames = [
+            1 => 'Monday',
+            2 => 'Tuesday',
+            3 => 'Wednesday',
+            4 => 'Thursday',
+            5 => 'Friday',
+            6 => 'Saturday',
+            7 => 'Sunday',
+        ];
+
+    @endphp
+
+
+    <div class="grid lg:grid-cols-3 gap-8">
+
+
+        {{-- ===================================================== --}}
+        {{-- ORDER SUMMARY --}}
+        {{-- ===================================================== --}}
+
+        <div class="lg:col-span-1">
+
+            <div class="bg-white rounded-2xl shadow-sm border p-6 sticky top-6">
+
+                @if($isCustom)
+
+                    {{-- ================================================= --}}
+                    {{-- CUSTOM ORDER --}}
+                    {{-- ================================================= --}}
+
+                    <div class="flex items-center justify-between mb-2">
+
+                        <h2 class="text-xl font-bold text-gray-900">
+                            Custom Meal Plan
+                        </h2>
+
+                        <span class="
+                            text-xs font-semibold
+                            bg-purple-100 text-purple-700
+                            px-3 py-1 rounded-full
+                        ">
+                            CUSTOM
+                        </span>
+
+                    </div>
+
+
+                    <p class="text-sm text-gray-500 mb-6">
+                        Your selected meals will repeat weekly
+                        throughout your subscription.
                     </p>
 
-                    <div class="border-t my-5"></div>
+
+                    {{-- ================================================= --}}
+                    {{-- PLAN DURATION --}}
+                    {{-- ================================================= --}}
+
+                    <div class="
+                        bg-gray-50
+                        border
+                        rounded-xl
+                        p-4
+                        mb-6
+                    ">
+
+                        <div class="flex justify-between items-center">
+
+                            <span class="text-sm text-gray-500">
+                                Subscription
+                            </span>
+
+                            <span class="font-semibold text-gray-900">
+                                {{ $mealPlan->name }}
+                            </span>
+
+                        </div>
+
+
+                        <div class="flex justify-between items-center mt-2">
+
+                            <span class="text-sm text-gray-500">
+                                Duration
+                            </span>
+
+                            <span class="font-semibold text-gray-900">
+                                {{ $mealPlan->duration_days }} days
+                            </span>
+
+                        </div>
+
+
+                        <div class="flex justify-between items-center mt-2">
+
+                            <span class="text-sm text-gray-500">
+                                Recurring weeks
+                            </span>
+
+                            <span class="font-semibold text-gray-900">
+                                {{ $weeks }}
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    {{-- ================================================= --}}
+                    {{-- SELECTED MEALS --}}
+                    {{-- ================================================= --}}
+
+                    <div class="space-y-4">
+
+                        @foreach(
+                            $subscription->mealSelections
+                                ->sortBy([
+                                    ['day_of_week', 'asc'],
+                                    ['meal_type', 'asc'],
+                                ])
+                            as $selection
+                        )
+
+                            <div class="
+                                border
+                                rounded-xl
+                                p-4
+                                hover:border-gray-300
+                                transition
+                            ">
+
+                                <div class="flex justify-between items-start">
+
+                                    <div>
+
+                                        <div class="
+                                            font-semibold
+                                            text-gray-900
+                                        ">
+
+                                            {{ $dayNames[$selection->day_of_week] }}
+
+                                            <span class="text-gray-400">
+                                                —
+                                            </span>
+
+                                            {{ ucfirst($selection->meal_type) }}
+
+                                        </div>
+
+
+                                        <div class="
+                                            text-sm
+                                            text-gray-600
+                                            mt-1
+                                        ">
+                                            {{ $selection->meal->name }}
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+
+                                {{-- PRICE --}}
+
+                                <div class="
+                                    flex
+                                    justify-between
+                                    items-center
+                                    mt-3
+                                    pt-3
+                                    border-t
+                                ">
+
+                                    <span class="text-sm text-gray-500">
+
+                                        KES
+                                        {{ number_format($selection->unit_price, 2) }}
+
+                                        × {{ $weeks }}
+
+                                    </span>
+
+
+                                    <span class="
+                                        font-semibold
+                                        text-gray-900
+                                    ">
+
+                                        KES
+                                        {{ number_format(
+                                            $selection->unit_price * $weeks,
+                                            2
+                                        ) }}
+
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        @endforeach
+
+                    </div>
+
+
+                    {{-- ================================================= --}}
+                    {{-- MEAL COUNTS --}}
+                    {{-- ================================================= --}}
+
+                    <div class="border-t my-6"></div>
+
 
                     <div class="flex justify-between mb-3">
+
                         <span class="text-gray-500">
-                            Duration
+                            Meals per week
                         </span>
 
-                        <span class="font-medium">
-                            {{ $mealPlan->duration_days }} days
+                        <span class="font-medium text-gray-900">
+                            {{ $weeklyMealCount }}
                         </span>
+
                     </div>
+
 
                     <div class="flex justify-between mb-5">
+
                         <span class="text-gray-500">
-                            Meal limit
+                            Total meals
                         </span>
 
-                        <span class="font-medium">
-                            {{ $mealPlan->meal_limit }} meals
+                        <span class="font-medium text-gray-900">
+                            {{ $totalMealOccurrences }}
                         </span>
+
                     </div>
+
+
+                    {{-- ================================================= --}}
+                    {{-- TOTAL --}}
+                    {{-- ================================================= --}}
 
                     <div class="border-t pt-5">
 
@@ -74,157 +312,328 @@
                             Total
                         </div>
 
-                        <div class="text-3xl font-bold text-gray-900">
-                            KES {{ number_format($mealPlan->price, 2) }}
+
+                        <div class="
+                            text-3xl
+                            font-bold
+                            text-gray-900
+                            mt-1
+                        ">
+
+                            KES {{ number_format($customTotal, 2) }}
+
+                        </div>
+
+
+                        <div class="
+                            text-xs
+                            text-gray-500
+                            mt-2
+                        ">
+
+                            {{ $weeklyMealCount }} selected meal(s)
+                            × {{ $weeks }} week(s)
+
                         </div>
 
                     </div>
 
-                </div>
 
-            </div>
+                @else
 
+                    {{-- ================================================= --}}
+                    {{-- STANDARD PLAN --}}
+                    {{-- ================================================= --}}
 
-            {{-- PAYMENT --}}
-            <div class="lg:col-span-2">
-
-                <div class="bg-white rounded-2xl shadow-sm border p-8">
-
-                    <h2 class="text-xl font-bold text-gray-900 mb-6">
-                        Payment method
+                    <h2 class="text-xl font-bold text-gray-900">
+                        {{ $mealPlan->name }}
                     </h2>
 
 
-                    {{-- ERROR --}}
-                    <div
-                        id="payment-error"
-                        class="hidden mb-6 rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3"
-                    ></div>
+                    <p class="text-gray-500 mt-2">
+                        {{ $mealPlan->description }}
+                    </p>
 
 
-                    {{-- SUCCESS --}}
-                    <div
-                        id="payment-success"
-                        class="hidden mb-6 rounded-xl bg-green-50 border border-green-200 text-green-700 px-4 py-3"
-                    ></div>
+                    <div class="border-t my-5"></div>
 
 
-                    <form
-                        id="checkout-form"
-                        method="POST"
-                        action="{{ route('checkout.initiate', $mealPlan) }}"
-                    >
+                    <div class="flex justify-between mb-3">
 
-                        @csrf
+                        <span class="text-gray-500">
+                            Duration
+                        </span>
 
+                        <span class="font-medium text-gray-900">
+                            {{ $mealPlan->duration_days }} days
+                        </span>
 
-                        {{-- PAYMENT METHOD --}}
-                        <div class="space-y-4">
-
-                            <label class="block cursor-pointer">
-                                <input
-                                    type="radio"
-                                    name="payment_method"
-                                    value="mpesa"
-                                    class="peer hidden"
-                                    checked
-                                >
-
-                                <div class="border rounded-xl p-5 peer-checked:border-green-600 peer-checked:bg-green-50 transition">
-
-                                    <div class="flex items-center justify-between">
-
-                                        <div>
-                                            <div class="font-semibold text-gray-900">
-                                                M-Pesa
-                                            </div>
-
-                                            <div class="text-sm text-gray-500">
-                                                Pay directly using your Safaricom M-Pesa.
-                                            </div>
-                                        </div>
-
-                                        <div class="text-green-600 font-bold">
-                                            M-Pesa
-                                        </div>
-
-                                    </div>
-
-                                </div>
-                            </label>
+                    </div>
 
 
-                            <label class="block cursor-pointer">
-                                <input
-                                    type="radio"
-                                    name="payment_method"
-                                    value="paystack"
-                                    class="peer hidden"
-                                >
+                    <div class="flex justify-between mb-5">
 
-                                <div class="border rounded-xl p-5 peer-checked:border-blue-600 peer-checked:bg-blue-50 transition">
+                        <span class="text-gray-500">
+                            Meal limit
+                        </span>
 
-                                    <div class="flex items-center justify-between">
+                        <span class="font-medium text-gray-900">
+                            {{ $mealPlan->meal_limit }} meals
+                        </span>
 
-                                        <div>
-                                            <div class="font-semibold text-gray-900">
-                                                Paystack
-                                            </div>
+                    </div>
 
-                                            <div class="text-sm text-gray-500">
-                                                Pay securely using Paystack.
-                                            </div>
-                                        </div>
 
-                                        <div class="text-blue-600 font-bold">
-                                            Paystack
-                                        </div>
+                    <div class="border-t pt-5">
 
-                                    </div>
-
-                                </div>
-                            </label>
-
+                        <div class="text-sm text-gray-500">
+                            Total
                         </div>
 
 
-                        {{-- PHONE --}}
-                        <div
-                            id="mpesa-phone"
-                            class="mt-6"
-                        >
+                        <div class="
+                            text-3xl
+                            font-bold
+                            text-gray-900
+                            mt-1
+                        ">
 
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                M-Pesa phone number
-                            </label>
+                            KES {{ number_format($mealPlan->price, 2) }}
+
+                        </div>
+
+                    </div>
+
+                @endif
+
+            </div>
+
+        </div>
+
+
+        {{-- ========================================================= --}}
+        {{-- PAYMENT --}}
+        {{-- ========================================================= --}}
+
+        <div class="lg:col-span-2">
+
+            <div class="
+                bg-white
+                rounded-2xl
+                shadow-sm
+                border
+                p-8
+            ">
+
+                <h2 class="
+                    text-xl
+                    font-bold
+                    text-gray-900
+                    mb-6
+                ">
+                    Payment method
+                </h2>
+
+
+                {{-- ================================================= --}}
+                {{-- ERROR --}}
+                {{-- ================================================= --}}
+
+                <div
+                    id="payment-error"
+                    class="
+                        hidden
+                        mb-6
+                        rounded-xl
+                        bg-red-50
+                        border
+                        border-red-200
+                        text-red-700
+                        px-4
+                        py-3
+                    "
+                ></div>
+
+
+                {{-- ================================================= --}}
+                {{-- SUCCESS --}}
+                {{-- ================================================= --}}
+
+                <div
+                    id="payment-success"
+                    class="
+                        hidden
+                        mb-6
+                        rounded-xl
+                        bg-green-50
+                        border
+                        border-green-200
+                        text-green-700
+                        px-4
+                        py-3
+                    "
+                ></div>
+
+
+                {{-- ================================================= --}}
+                {{-- CHECKOUT FORM --}}
+                {{-- ================================================= --}}
+
+                <form
+                    id="checkout-form"
+                    method="POST"
+                    action="{{ route('checkout.initiate', $mealPlan) }}"
+                >
+
+                    @csrf
+
+
+                    {{-- ================================================= --}}
+                    {{-- PAYMENT METHOD --}}
+                    {{-- ================================================= --}}
+
+                    <div class="space-y-4">
+
+                        <label class="block cursor-pointer">
 
                             <input
-                                type="text"
-                                name="phone"
-                                placeholder="07XXXXXXXX"
-                                value="{{ auth()->user()->phone }}"
-                                class="w-full border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                type="radio"
+                                name="payment_method"
+                                value="paystack"
+                                class="peer hidden"
+                                checked
                             >
 
-                            <p class="text-xs text-gray-500 mt-2">
-                                You will receive an M-Pesa STK Push on this number.
-                            </p>
+
+                            <div class="
+                                border
+                                rounded-xl
+                                p-5
+                                peer-checked:border-blue-600
+                                peer-checked:bg-blue-50
+                                transition
+                            ">
+
+                                <div class="
+                                    flex
+                                    items-center
+                                    justify-between
+                                ">
+
+                                    <div>
+
+                                        <div class="
+                                            font-semibold
+                                            text-gray-900
+                                        ">
+                                            Pay with Mobile Money or Card
+                                        </div>
+
+
+                                        <div class="
+                                            text-sm
+                                            text-gray-500
+                                            mt-1
+                                        ">
+                                            Pay securely using
+                                            M-Pesa, Airtel Money or Card.
+                                        </div>
+
+                                    </div>
+
+
+                                    <div class="
+                                        text-blue-600
+                                        font-bold
+                                        text-sm
+                                    ">
+                                        PAYSTACK
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </label>
+
+                    </div>
+
+
+                    {{-- ================================================= --}}
+                    {{-- PAYMENT SUMMARY --}}
+                    {{-- ================================================= --}}
+
+                    <div class="
+                        mt-8
+                        bg-gray-50
+                        border
+                        rounded-xl
+                        p-5
+                    ">
+
+                        <div class="
+                            flex
+                            justify-between
+                            items-center
+                        ">
+
+                            <span class="text-gray-500">
+                                Amount to pay
+                            </span>
+
+                            <span class="
+                                text-2xl
+                                font-bold
+                                text-gray-900
+                            ">
+
+                                KES {{ number_format($displayTotal, 2) }}
+
+                            </span>
 
                         </div>
 
+                    </div>
 
-                        {{-- PAY --}}
-                        <button
-                            id="pay-button"
-                            type="submit"
-                            class="w-full mt-8 bg-gray-900 text-white py-4 rounded-xl font-semibold hover:bg-gray-800 transition"
-                        >
-                            Pay KES {{ number_format($mealPlan->price, 2) }}
-                        </button>
 
-                    </form>
+                    {{-- ================================================= --}}
+                    {{-- PAY BUTTON --}}
+                    {{-- ================================================= --}}
 
-                </div>
+                    <button
+                        id="pay-button"
+                        type="submit"
+                        class="
+                            w-full
+                            mt-6
+                            bg-gray-900
+                            text-white
+                            py-4
+                            rounded-xl
+                            font-semibold
+                            hover:bg-gray-800
+                            disabled:opacity-50
+                            disabled:cursor-not-allowed
+                            transition
+                        "
+                    >
+
+                        Pay KES {{ number_format($displayTotal, 2) }}
+
+                    </button>
+
+
+                    <p class="
+                        text-center
+                        text-xs
+                        text-gray-400
+                        mt-4
+                    ">
+                        You will be redirected to our secure payment
+                        provider to complete your payment.
+                    </p>
+
+                </form>
 
             </div>
 
@@ -232,41 +641,36 @@
 
     </div>
 
+</div>
+
+
+{{-- =============================================================== --}}
+{{-- JAVASCRIPT --}}
+{{-- =============================================================== --}}
 
 <script>
 
 const form = document.getElementById('checkout-form');
+
 const payButton = document.getElementById('pay-button');
 
 const errorBox = document.getElementById('payment-error');
+
 const successBox = document.getElementById('payment-success');
 
-const phoneSection = document.getElementById('mpesa-phone');
 
-const paymentMethods =
-    document.querySelectorAll('input[name="payment_method"]');
-
-
-paymentMethods.forEach(method => {
-
-    method.addEventListener('change', function () {
-
-        if (this.value === 'mpesa') {
-            phoneSection.classList.remove('hidden');
-        } else {
-            phoneSection.classList.add('hidden');
-        }
-
-    });
-
-});
-
+/*
+|--------------------------------------------------------------------------
+| CHECKOUT
+|--------------------------------------------------------------------------
+*/
 
 form.addEventListener('submit', async function (event) {
 
     event.preventDefault();
 
     errorBox.classList.add('hidden');
+
     successBox.classList.add('hidden');
 
     payButton.disabled = true;
@@ -278,24 +682,55 @@ form.addEventListener('submit', async function (event) {
 
         const formData = new FormData(form);
 
+
         const response = await fetch(
             form.action,
             {
                 method: 'POST',
+
                 headers: {
+
                     'Accept': 'application/json',
+
                     'X-CSRF-TOKEN':
                         document.querySelector(
                             'input[name="_token"]'
                         ).value
+
                 },
+
                 body: formData
             }
         );
 
 
+        /*
+        |--------------------------------------------------------------------------
+        | HANDLE NON-JSON RESPONSES
+        |--------------------------------------------------------------------------
+        */
+
+        const contentType =
+            response.headers.get('content-type') || '';
+
+
+        if (!contentType.includes('application/json')) {
+
+            throw new Error(
+                'The server returned an unexpected response. Please try again.'
+            );
+
+        }
+
+
         const data = await response.json();
 
+
+        /*
+        |--------------------------------------------------------------------------
+        | ERROR
+        |--------------------------------------------------------------------------
+        */
 
         if (!response.ok || !data.success) {
 
@@ -308,8 +743,11 @@ form.addEventListener('submit', async function (event) {
 
 
         /*
-         * PAYSTACK
-         */
+        |--------------------------------------------------------------------------
+        | PAYSTACK
+        |--------------------------------------------------------------------------
+        */
+
         if (
             data.provider === 'paystack' &&
             data.authorization_url
@@ -319,12 +757,16 @@ form.addEventListener('submit', async function (event) {
                 data.authorization_url;
 
             return;
+
         }
 
 
         /*
-         * M-PESA
-         */
+        |--------------------------------------------------------------------------
+        | M-PESA
+        |--------------------------------------------------------------------------
+        */
+
         if (data.provider === 'mpesa') {
 
             successBox.innerText =
@@ -337,10 +779,25 @@ form.addEventListener('submit', async function (event) {
                 'Waiting for payment...';
 
             return;
+
         }
 
 
+        /*
+        |--------------------------------------------------------------------------
+        | UNKNOWN RESPONSE
+        |--------------------------------------------------------------------------
+        */
+
+        throw new Error(
+            'Payment provider returned an unexpected response.'
+        );
+
+
     } catch (error) {
+
+        console.error(error);
+
 
         errorBox.innerText =
             error.message ||
@@ -348,10 +805,11 @@ form.addEventListener('submit', async function (event) {
 
         errorBox.classList.remove('hidden');
 
+
         payButton.disabled = false;
 
         payButton.innerText =
-            'Pay KES {{ number_format($mealPlan->price, 2) }}';
+            'Pay KES {{ number_format($displayTotal, 2) }}';
 
     }
 

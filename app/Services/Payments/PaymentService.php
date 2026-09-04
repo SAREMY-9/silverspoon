@@ -9,6 +9,7 @@ use App\Models\Subscription;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
+use App\Services\MealCustomizationService;
 
 class PaymentService
 {
@@ -19,9 +20,10 @@ class PaymentService
      * for a subscription at a time.
      */
     public function createPayment(
-        Subscription $subscription,
-        string $provider = 'mpesa'
-    ): Payment {
+            Subscription $subscription,
+            string $provider = 'mpesa',
+            ?MealCustomizationService $customizationService = null
+        ): Payment {
         if ($subscription->status !== SubscriptionStatus::PENDING) {
             throw new RuntimeException(
                 'A payment can only be created for a pending subscription.'
@@ -56,10 +58,24 @@ class PaymentService
             );
         }
 
+
+
+        $amount = $subscription->mealSelections()->exists()
+            ? app(MealCustomizationService::class)
+                ->calculateTotal($subscription)
+            : $subscription->mealPlan->price;
+
+        if ((float) $amount <= 0) {
+            throw new RuntimeException(
+                'The subscription total must be greater than zero.'
+            );
+        }
+
+
         return Payment::create([
             'user_id' => $subscription->user_id,
             'subscription_id' => $subscription->id,
-            'amount' => $subscription->mealPlan->price,
+            'amount' => $amount,
             'currency' => 'KES',
             'provider' => $provider,
             'transaction_reference' => $this->generateReference(),
@@ -266,100 +282,246 @@ class PaymentService
      * Generate meal entitlements belonging to a subscription.
      */
     protected function createEntitlements(
-        Subscription $subscription
-    ): void {
-        $subscription->loadMissing(
-            'mealPlan',
-            'entitlements'
-        );
+            Subscription $subscription
+        ): void {
+            $subscription->loadMissing(
+                'mealPlan',
+                'entitlements',
+                'mealSelections.meal'
+            );
 
-
-
-        $startsAt = now();
-        $subscription->update([
-            'starts_at' => $startsAt,
-
-            'ends_at' => $startsAt
-                ->copy()
-                ->addDays(
-                    $subscription->mealPlan->duration_days - 1
-                )
-                ->endOfDay(),
-
-            'status' => SubscriptionStatus::ACTIVE,
-        ]);
-
-
+            
         /*
-         * Idempotency protection.
-         */
-        if ($subscription->entitlements()->exists()) {
-            return;
-        }
+        * ---------------------------------------------------------
+        * CUSTOM SUBSCRIPTION
+        * ---------------------------------------------------------
+        *
+        * For custom subscriptions:
+        *
+        * The customer's selected meals define the weekly
+        * recurring schedule.
+        *
+        * Example:
+        *
+        * Monday supper
+        * Tuesday breakfast
+        * Tuesday supper
+        * Wednesday lunch
+        *
+        * A 7-day plan:
+        *   1 occurrence of each selection
+        *
+        * A 30-day plan:
+        *   4 occurrences of each selection
+        *
+        * A 90-day plan:
+        *   12 occurrences of each selection
+        *
+        * The number of occurrences is therefore determined
+        * by the meal plan duration.
+        */
 
-        $mealPlan = $subscription->mealPlan;
+        $customSelections = $subscription
+            ->mealSelections()
+            ->get();
 
-        if (!$mealPlan) {
-            throw new RuntimeException(
-                'Subscription does not have a valid meal plan.'
+        if ($customSelections->isNotEmpty()) {
+
+            /*
+            * Number of complete recurring weeks.
+            *
+            * 7 days  = 1 week
+            * 30 days = 4 weeks
+            * 90 days = 12 weeks
+            */
+            $occurrences = max(
+                1,
+                intdiv(
+                    $subscription->mealPlan->duration_days,
+                    7
+                )
             );
-        }
 
-        if (!$subscription->starts_at || !$subscription->ends_at) {
-            throw new RuntimeException(
-                'Subscription dates are not configured.'
-            );
-        }
+            /*
+            * Start scheduling from today.
+            */
+            $start = now()
+                ->copy()
+                ->startOfDay();
 
-        $start = $subscription->starts_at
-            ->copy()
-            ->startOfDay();
+            /*
+            * Store all generated delivery dates.
+            */
+            $deliveryDates = collect();
 
-        $end = $subscription->ends_at
-            ->copy()
-            ->startOfDay();
+            /*
+            * -----------------------------------------------------
+            * GENERATE OCCURRENCES
+            * -----------------------------------------------------
+            *
+            * Each selected meal is repeated once per week
+            * for the duration of the plan.
+            */
+            foreach ($customSelections as $selection) {
 
-        $meals = $mealPlan->meals()
-            ->where('is_active', true)
-            ->get()
-            ->keyBy(function ($meal) {
-                return $meal->day_of_week . ':' . $meal->meal_type;
-            });
+                $dayOfWeek = (int) $selection->day_of_week;
 
-        for (
-            $date = $start->copy();
-            $date->lte($end);
-            $date->addDay()
-        ) {
-            $dayOfWeek = $date->dayOfWeekIso;
+                /*
+                * Find the next occurrence of the selected weekday.
+                */
+                $date = $start->copy();
 
-            foreach ([
-                'breakfast',
-                'lunch',
-                'supper',
-            ] as $mealType) {
-
-                $key = $dayOfWeek . ':' . $mealType;
-
-                $meal = $meals->get($key);
-
-                if (!$meal) {
-                    throw new RuntimeException(
-                        "No {$mealType} meal configured for "
-                        . "{$date->format('l')}."
-                    );
+                while ($date->dayOfWeekIso !== $dayOfWeek) {
+                    $date->addDay();
                 }
 
-                $subscription->entitlements()->create([
-                    'meal_id' => $meal->id,
-                    'scheduled_for' => $date->toDateString(),
-                    'status' => 'available',
-                    'expires_at' => $date->copy()->endOfDay(),
-                ]);
+                /*
+                * Repeat the selected meal according to the
+                * number of weeks in the meal plan.
+                */
+                for ($i = 0; $i < $occurrences; $i++) {
+
+                    $deliveryDate = $date
+                        ->copy()
+                        ->addWeeks($i);
+
+                    $deliveryDates->push([
+                        'meal_id' => $selection->meal_id,
+                        'scheduled_for' => $deliveryDate->toDateString(),
+                        'status' => 'available',
+                        'expires_at' => $deliveryDate
+                            ->copy()
+                            ->endOfDay(),
+                    ]);
+                }
+            }
+
+            /*
+            * Sort deliveries chronologically.
+            */
+            $deliveryDates = $deliveryDates
+                ->sortBy('scheduled_for')
+                ->values();
+
+            /*
+            * Make sure we actually generated deliveries.
+            */
+            $firstDelivery = $deliveryDates->first();
+            $lastDelivery = $deliveryDates->last();
+
+            if (!$firstDelivery || !$lastDelivery) {
+                throw new RuntimeException(
+                    'No custom meal deliveries could be generated.'
+                );
+            }
+
+            /*
+            * Subscription dates follow the generated custom
+            * delivery schedule.
+            */
+            $subscription->update([
+                'starts_at' => \Carbon\Carbon::parse(
+                    $firstDelivery['scheduled_for']
+                )->startOfDay(),
+
+                'ends_at' => \Carbon\Carbon::parse(
+                    $lastDelivery['scheduled_for']
+                )->endOfDay(),
+
+                'status' => SubscriptionStatus::ACTIVE,
+            ]);
+
+            /*
+            * Idempotency protection.
+            *
+            * Never create duplicate entitlements if this payment
+            * callback is received more than once.
+            */
+            if ($subscription->entitlements()->exists()) {
+                return;
+            }
+
+            /*
+            * Create the actual meal delivery entitlements.
+            */
+            foreach ($deliveryDates as $delivery) {
+
+                $subscription->entitlements()->create($delivery);
+            }
+
+            return;
+        }
+            /*
+            * ---------------------------------------------------------
+            * STANDARD MEAL PLAN
+            * ---------------------------------------------------------
+            *
+            * Only normal subscriptions use the meal plan duration.
+            */
+
+            $mealPlan = $subscription->mealPlan;
+
+            if (!$mealPlan) {
+                throw new RuntimeException(
+                    'Subscription does not have a valid meal plan.'
+                );
+            }
+
+            if (!$subscription->starts_at || !$subscription->ends_at) {
+                throw new RuntimeException(
+                    'Subscription dates are not configured.'
+                );
+            }
+
+            $start = $subscription->starts_at
+                ->copy()
+                ->startOfDay();
+
+            $end = $subscription->ends_at
+                ->copy()
+                ->startOfDay();
+
+            $meals = $mealPlan->meals()
+                ->where('is_active', true)
+                ->get()
+                ->keyBy(function ($meal) {
+                    return $meal->day_of_week
+                        . ':' . $meal->meal_type;
+                });
+
+            for (
+                $date = $start->copy();
+                $date->lte($end);
+                $date->addDay()
+            ) {
+                $dayOfWeek = $date->dayOfWeekIso;
+
+                foreach ([
+                    'breakfast',
+                    'lunch',
+                    'supper',
+                ] as $mealType) {
+
+                    $key = $dayOfWeek . ':' . $mealType;
+
+                    $meal = $meals->get($key);
+
+                    if (!$meal) {
+                        throw new RuntimeException(
+                            "No {$mealType} meal configured for "
+                            . "{$date->format('l')}."
+                        );
+                    }
+
+                    $subscription->entitlements()->create([
+                        'meal_id' => $meal->id,
+                        'scheduled_for' => $date->toDateString(),
+                        'status' => 'available',
+                        'expires_at' => $date->copy()->endOfDay(),
+                    ]);
+                }
             }
         }
-    }
-
     /**
      * Generate an internal payment reference.
      */

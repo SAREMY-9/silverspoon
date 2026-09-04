@@ -85,7 +85,7 @@
         </div>
 
 
-        {{-- Details --}}
+      {{-- Details --}}
         <div class="lg:col-span-2">
 
             <div class="rounded-2xl border border-slate-200 bg-white p-6">
@@ -124,6 +124,20 @@
 
                         <span class="font-semibold text-slate-900">
                             {{ $meal->name }}
+                        </span>
+
+                    </div>
+
+
+                    {{-- Price --}}
+                    <div class="flex items-center justify-between py-4">
+
+                        <span class="text-sm text-slate-500">
+                            Meal Price
+                        </span>
+
+                        <span class="text-lg font-bold text-slate-900">
+                            KES {{ number_format($meal->price ?? 0, 2) }}
                         </span>
 
                     </div>

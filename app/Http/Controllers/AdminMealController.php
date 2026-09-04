@@ -143,9 +143,24 @@ class AdminMealController extends Controller
                 'max:255',
             ],
 
+
+            'price' => [
+                'required',
+                'numeric',
+                'min:0',
+            ],
+
+
             'description' => [
                 'nullable',
                 'string',
+            ],
+
+
+            'price' => [
+                'required',
+                'numeric',
+                'min:0',
             ],
 
             'meal_type' => [
@@ -246,6 +261,14 @@ class AdminMealController extends Controller
                 'nullable',
                 'string',
             ],
+
+
+            'price' => [
+                'required',
+                'numeric',
+                'min:0',
+            ],
+            
 
             'meal_type' => [
                 'required',
