@@ -17,7 +17,7 @@ class SubscriptionService
      * How long a pending payment attempt reserves
      * the user's checkout slot.
      */
-    protected int $paymentAttemptLifetime = 5;
+    protected int $paymentAttemptLifetime = 1;
 
     /**
      * Create or reuse a pending subscription.
@@ -124,7 +124,7 @@ class SubscriptionService
                             ->diffInSeconds($expiresAt);
 
                         $remainingMinutes = max(
-                            1,
+                            0,
                             (int) ceil(
                                 $remainingSeconds / 60
                             )

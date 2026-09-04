@@ -120,7 +120,7 @@
 
                         {{-- PAYMENT METHOD --}}
                         <div class="space-y-4">
-
+<!---
                             <label class="block cursor-pointer">
                                 <input
                                     type="radio"
@@ -129,6 +129,8 @@
                                     class="peer hidden"
                                     checked
                                 >
+
+
 
                                 <div class="border rounded-xl p-5 peer-checked:border-green-600 peer-checked:bg-green-50 transition">
 
@@ -152,7 +154,7 @@
 
                                 </div>
                             </label>
-
+--->
 
                             <label class="block cursor-pointer">
                                 <input
@@ -186,14 +188,11 @@
                             </label>
 
                         </div>
-
+<!----
 
                         {{-- PHONE --}}
-                        <div
-                            id="mpesa-phone"
-                            class="mt-6"
-                        >
-
+                        <div id="mpesa-phone" class="mt-6">
+                    
                             <label class="block text-sm font-medium text-gray-700 mb-2">
                                 M-Pesa phone number
                             </label>
@@ -211,7 +210,7 @@
                             </p>
 
                         </div>
-
+---->
 
                         {{-- PAY --}}
                         <button
@@ -340,7 +339,7 @@ form.addEventListener('submit', async function (event) {
         }
 
 
-    } catch (error) {
+            } catch (error) {
 
         errorBox.innerText =
             error.message ||
