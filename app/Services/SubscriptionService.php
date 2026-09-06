@@ -32,7 +32,7 @@ class SubscriptionService
     public function createPending(
         User $user,
         MealPlan $mealPlan
-    ): Subscription {
+     ): Subscription {
         if (!$mealPlan->is_active) {
             throw new RuntimeException(
                 'This meal plan is currently unavailable.'

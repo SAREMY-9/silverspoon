@@ -93,6 +93,19 @@
                             </a>
 
 
+                            {{-- Subscriptions --}}
+
+                            <a
+                                href="{{ route('admin.subscriptions.index') }}"
+                                class="rounded-lg px-3 py-2 text-sm font-medium transition
+                                {{ request()->routeIs('admin.users.*')
+                                    ? 'bg-slate-900 text-white'
+                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
+                            >
+                                Subscriptions
+                            </a>
+
+
                             {{-- Meal Plans --}}
 
                             <a
