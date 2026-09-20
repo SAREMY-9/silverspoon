@@ -22,6 +22,7 @@ use App\Http\Controllers\AdminSubscriptionController;
 use App\Http\Controllers\RoleDashboardController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\StaffDashboardController;
+use App\Http\Controllers\LegalController;
 
 
 Route::get('/', [HomeController::class, 'index'])
@@ -334,3 +335,9 @@ Route::middleware('auth')->group(function () {
 
 
 });
+
+    Route::get('/terms', [LegalController::class, 'terms']) ->name('terms');
+
+
+    Route::get('/privacy', [LegalController::class, 'privacy'])
+        ->name('privacy');
